@@ -1,0 +1,61 @@
+//
+//  PublicAppointmentView.m
+//  Lobby
+//
+//  Created by CIB-MacMini on 16/10/11.
+//  Copyright © 2016年 swy. All rights reserved.
+//
+
+#import "PublicAppointmentView.h"
+#import "CustomIndicatorView.h"
+
+@implementation PublicAppointmentView
+
+-(void)awakeFromNib{
+    self.layer.cornerRadius = 5;
+    self.clipsToBounds = YES;
+}
+
+- (void)setPragrames:(NSArray *)pragrames
+{
+    _pragrames = pragrames;
+    
+    //访问接口
+    [self dateDetail:_pragrames];
+}
+
+- (void)dateDetail:(NSArray *)pragram
+{
+    [[CustomIndicatorView sharedView] showInView:self];
+    [[CustomIndicatorView sharedView] startAnimating];
+    
+    NSMutableDictionary *paramDic = [[NSMutableDictionary alloc] init];
+    
+    [paramDic setObject:pragram[0] forKey:@"dqdh"];
+    [paramDic setObject:pragram[1] forKey:@"jgdh"];
+    [paramDic setObject:pragram[2] forKey:@"ywlx"];
+    [paramDic setObject:pragram[3] forKey:@"yybh"];
+    
+    void(^failure)(NSString *, NSString *) = ^(NSString *responseCode, NSString *responseInfo) {
+        [[CustomIndicatorView sharedView] stopAnimating];
+        NSString *alertInfo = [NSString stringWithFormat:@"错误%@， 网络连接错误", responseCode];
+    };
+    
+    void(^success)(NSString *, NSString *) = ^(NSString *responseCode, NSString *responseInfo) {
+        [[CustomIndicatorView sharedView] stopAnimating];
+        if ([responseCode isEqualToString:@"I00"]) {
+            NSString *resultCode = [responseInfo valueForKey:@"resultCode"];
+            if ([resultCode isEqualToString:@"0"]) {
+                id result = [responseInfo valueForKey:@"result"];
+                
+            }
+        }
+    };
+    
+    [InvokeManager invokeApi:@"otodgxx" withMethod:@"POST" andParameter:paramDic onSuccess:success onFailure:failure];
+}
+
+- (IBAction)close:(id)sender {
+    [self.superview removeFromSuperview];
+}
+@end

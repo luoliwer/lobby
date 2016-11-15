@@ -1,0 +1,78 @@
+//
+//  TransferDetailView.m
+//  Lobby
+//
+//  Created by CIB-MacMini on 16/3/31.
+//  Copyright © 2016年 swy. All rights reserved.
+//
+
+#import "TransferDetailView.h"
+#import "TransferCheck.h"
+#import "TransferRoleModel.h"
+
+@implementation TransferDetailView
+
+-(void)awakeFromNib{
+    self.layer.cornerRadius = 5;
+    self.clipsToBounds = 5;
+}
+
+-(void)didMoveToSuperview{
+    TransferCheck *customer;
+    customer = self.transferModel;
+    self.customerName.text = customer.custinfo_name;
+    [self sizeWithString:self.customerName.text font:self.customerName.font];
+    self.launchDate.text = [self dateFormatterTransfer:customer.clue_date];
+    [self sizeWithString:self.launchDate.text font:self.launchDate.font];
+    self.launchTime.text = [self timeFormatterTransfer:customer.clue_time];
+    [self sizeWithString:self.launchTime.text font:self.launchTime.font];
+    self.businessType.text = customer.referral_bs_name;
+    for (TransferRoleModel *model in [GlobleData sharedInstance].xslyArray) {
+        if ([model.codeId isEqualToString:customer.cluesource]) {
+            self.resource.text = model.codeValue;
+            break;
+        }
+    }
+    self.telleName.text = customer.referraluser_name;
+    self.businessCount.text = customer.busi_amount;
+    self.recommendRemarkTextView.text = customer.remark;
+    self.feedbackTextView.text = customer.remark1;
+}
+
+// uilabel宽度自适应
+- (CGSize)sizeWithString:(NSString *)string font:(UIFont *)font
+{
+    CGRect rect = [string boundingRectWithSize:CGSizeMake(320, 8000)//限制最大的宽度和高度
+                                       options:NSStringDrawingTruncatesLastVisibleLine | NSStringDrawingUsesFontLeading  |NSStringDrawingUsesLineFragmentOrigin//采用换行模式
+                                    attributes:@{NSFontAttributeName: font}//传入的字体字典
+                                       context:nil];
+    
+    return rect.size;
+}
+
+// 将yyyyMMdd格式的日期转化成yyyy-MM-dd格式的日期
+- (NSString *)dateFormatterTransfer:(NSString *)dateString{
+    NSDateFormatter *formatter=[[NSDateFormatter alloc] init];
+    [formatter setDateFormat:@"yyyyMMdd"];
+    NSDate *date = [formatter dateFromString:dateString];
+    NSDateFormatter *newmatter = [[NSDateFormatter alloc] init];
+    [newmatter setDateFormat:@"yyyy-MM-dd"];
+    NSString *dateStr = [newmatter stringFromDate:date];
+    return dateStr;
+}
+
+// 将HHmmss格式的时间转换成HH:mm格式的时间
+- (NSString *)timeFormatterTransfer:(NSString *)timeString{
+    NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
+    [formatter setDateFormat:@"HHmmss"];
+    NSDate *time = [formatter dateFromString:timeString];
+    NSDateFormatter *timeMatter = [[NSDateFormatter alloc] init];
+    [timeMatter setDateFormat:@"HH:mm"];
+    NSString *timeStr = [timeMatter stringFromDate:time];
+    return timeStr;
+}
+
+- (IBAction)sure:(id)sender {
+    [self.superview removeFromSuperview];
+}
+@end

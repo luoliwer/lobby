@@ -1,0 +1,415 @@
+//
+//  PrivateAppointmentView.m
+//  Lobby
+//
+//  Created by CIB-MacMini on 16/10/11.
+//  Copyright © 2016年 swy. All rights reserved.
+//
+
+#import "PrivateAppointmentView.h"
+#import "CustomIndicatorView.h"
+#import "ListView.h"
+
+@implementation PrivateAppointmentView
+{
+    NSString *yystatus;
+    UIScrollView *scrollview;
+    float temporayVar;
+    BOOL ischoiced;
+    NSMutableArray *detailArray;
+    NSArray *array1;
+    NSArray *array2;
+    NSArray *statusArr;
+    NSArray *undealArr; // 未处理
+    NSArray *doingArr; // 正在备钞
+    NSArray *doneArr; // 已备钞待提取
+    
+    NSString *contentText; //短信内容
+    
+    ListView *_listView;
+    NSArray *_statusTypesArr;
+    NSDictionary *_statusTypesDic;
+
+    NSString *_businessType;
+    NSString *_dealTime;
+}
+
+-(void)awakeFromNib{
+    ischoiced = NO;
+    self.remak_textview.delegate = self;
+    contentText = @"      您的现钞预约已备钞，请8月16日上午来网点办理，联系电话88012757。您可先通过“服务预约”办理预约取号，免排队。";
+    self.layer.cornerRadius = 5;
+    self.clipsToBounds = YES;
+    self.appointmentStatus_Label.textColor = UIColorFromRGB(0x24344e);
+    array1 = [NSArray arrayWithObjects:@"业务类型",@"客户姓名",@"币种",@"金额",@"期望提取日期",@"手机号",@"预约时间",@"备注",nil];
+    array2 = [NSArray arrayWithObjects:@"1",@"2",@"3",@"4",@"5",@"6",@"7",@"8",@"9",@"10", nil];
+
+    undealArr = @[@{@"9":@"正在备钞"},@{@"6":@"已备钞待提取"},@{@"4":@"客户放弃"},@{@"7":@"无法满足客户需求"},@{@"2":@"提取完成"}];
+    
+    doingArr = @[@{@"6":@"已备钞待提取"},@{@"4":@"客户放弃"},@{@"7":@"无法满足客户需求"},@{@"2":@"提取完成"}];
+    
+    doneArr = @[@{@"4":@"客户放弃"},@{@"7":@"无法满足客户需求"},@{@"2":@"提取完成"}];
+    detailArray = [[NSMutableArray alloc] initWithArray:array2];
+}
+
+- (IBAction)statuschange:(UIButton *)sender {
+    //初始化
+    if (_listView) {
+        [_listView removeFromSuperview];
+        _listView = nil;
+    }else{
+        _listView = [[ListView alloc] init];
+        _listView.backgroundColor = [UIColor redColor];
+        
+        __block PrivateAppointmentView *weakSelf = self;
+        _listView.frame = CGRectMake(420, 465, 120, 200);
+        
+        NSString *selected = self.appointmentStatus_Label.text;
+        _listView.selectedValue = selected;
+        _listView.listItems = _statusTypesArr;
+        
+        _listView.listViewSelectedValue = ^(NSDictionary *val) {
+            [weakSelf selectedValueToButton:val];
+        };
+        
+        [self addSubview:_listView];
+    }
+    
+}
+
+- (void)selectedValueToButton:(NSDictionary *)val
+{
+    NSString *value = [[val allValues] firstObject];
+    self.appointmentStatus_Label.text = value;
+    _statusTypesDic = val;
+    [_listView removeFromSuperview];
+}
+
+
+
+
+- (IBAction)sendmessage:(id)sender {
+    if (![[[_statusTypesDic allKeys] firstObject] isEqualToString:@"6"]) {//只有当状态为已备钞待提取状态才可以点击
+        return;
+    }
+    NSString *content = [NSString stringWithFormat:@"您的现钞预约已备钞，请%@上午来网点办理。您可先通过“服务预约”办理预约取号，免排队。", _dealTime];
+    self.remak_textview.text = content;
+    ischoiced = !ischoiced;
+    if (ischoiced) {
+        self.contentLabel.textColor = [UIColor redColor];
+        self.contentLabel.text = @"请编辑短信文本，短信限60字";
+        [self.contentLabel setWidth:234];
+        [self.rightbracket setX:380];
+        self.remak_textview.userInteractionEnabled = YES;
+        self.remak_textview.textColor = UIColorFromRGB(0x24344e);
+        [self.checkboxBtn setBackgroundImage:[UIImage imageNamed:@"btn_send_click"] forState:UIControlStateNormal];
+        
+        
+    }else{
+        self.contentLabel.textColor = [UIColor blackColor];
+        self.contentLabel.text = @"请编辑短信内容";
+        [self.contentLabel setWidth:124];
+        [self.rightbracket setX:279];
+        self.remak_textview.userInteractionEnabled = NO;
+        self.remak_textview.textColor = UIColorFromRGB(0xa6a7b1);
+        [self.checkboxBtn setBackgroundImage:[UIImage imageNamed:@"btn_send_unclick"] forState:UIControlStateNormal];
+    }
+}
+
+- (void)setPragrames:(NSArray *)pragrames
+{
+    _pragrames = pragrames;
+    
+    //访问接口
+    [self dateDetail:_pragrames];
+}
+
+- (void)dateDetail:(NSArray *)pragram
+{
+    [[CustomIndicatorView sharedView] showInView:self];
+    [[CustomIndicatorView sharedView] startAnimating];
+    
+    NSMutableDictionary *paramDic = [[NSMutableDictionary alloc] init];
+    
+    [paramDic setObject:pragram[0] forKey:@"dqdh"];
+    [paramDic setObject:pragram[1] forKey:@"jgdh"];
+    [paramDic setObject:pragram[2] forKey:@"yybh"];
+    
+    void(^failure)(NSString *, NSString *) = ^(NSString *responseCode, NSString *responseInfo) {
+        [[CustomIndicatorView sharedView] stopAnimating];
+        NSString *alertInfo = [NSString stringWithFormat:@"错误%@， 网络连接错误", responseCode];
+        [self showMessage:alertInfo];
+    };
+    
+    void(^success)(NSString *, NSString *) = ^(NSString *responseCode, NSString *responseInfo) {
+        [[CustomIndicatorView sharedView] stopAnimating];
+        if ([responseCode isEqualToString:@"I00"]) {
+            NSString *resultCode = [responseInfo valueForKey:@"resultCode"];
+            if ([resultCode isEqualToString:@"0"]) {
+                id result = [responseInfo valueForKey:@"result"];
+                
+                //设置期望提取时间
+                NSString *dateTime = result[@"qwqxrq"];
+                NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
+                [formatter setDateFormat:@"yyyyMMdd"];
+                NSDate *d = [formatter dateFromString:dateTime];
+                [formatter setDateFormat:@"yyyy-MM-dd"];
+                NSString *qwtqtimeStr = [formatter stringFromDate:d];
+                [formatter setDateFormat:@"MM月dd日"];
+                _dealTime = [formatter stringFromDate:d];
+                //设置默认值
+                NSString *content = [NSString stringWithFormat:@"您的现钞预约已备钞，请%@上午来网点办理。您可先通过“服务预约”办理预约取号，免排队。", _dealTime];
+                self.remak_textview.text = content;
+                [detailArray replaceObjectAtIndex:4 withObject:qwtqtimeStr];
+                
+                //设置预约时间
+                NSString *createTime = result[@"cjsj"];
+                NSDateFormatter *dateformatter = [[NSDateFormatter alloc] init];
+                [dateformatter setDateFormat:@"yyyyMMdd"];
+                NSDate *date = [dateformatter dateFromString:createTime];
+                [dateformatter setDateFormat:@"yyyy-MM-dd"];
+                NSString *createtimeStr = [formatter stringFromDate:date];
+                [detailArray replaceObjectAtIndex:6 withObject:createtimeStr];
+                
+                NSDictionary *businessTypeDic = nil;//业务类型
+                NSDictionary *moneyTypeDic = nil;//公司性质类型
+                NSDictionary *statusDic = nil;//预约状态类型
+                
+                //从本地获取客户层级
+                NSString *homePath = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES)[0];
+                NSString *filePath = [homePath stringByAppendingPathComponent:@"keyvalue.plist"];
+                NSDictionary *rootDic = [NSDictionary dictionaryWithContentsOfFile:filePath];
+                if (rootDic) {
+                    NSArray *branches = rootDic[@"Root"];
+                    NSMutableDictionary *tempDic1 = [NSMutableDictionary dictionary];
+                    NSMutableDictionary *tempDic2 = [NSMutableDictionary dictionary];
+                    NSMutableDictionary *tempDic3 = [NSMutableDictionary dictionary];
+                    for (NSDictionary *item in branches) {
+                        if ([@"OTO_DSYW" isEqualToString:item[@"codeType"]]) {
+                            NSString *val = item[@"codeValue"];
+                            NSString *key = item[@"codeId"];
+                            [tempDic1 addEntriesFromDictionary:@{key:val}];
+                        } else if ([@"OTO_YWBZ" isEqualToString:item[@"codeType"]]) {
+                            NSString *val = item[@"codeValue"];
+                            NSString *key = item[@"codeId"];
+                            [tempDic2 addEntriesFromDictionary:@{key:val}];
+                        } else if ([@"OTO_BITX" isEqualToString:item[@"codeType"]]) {
+                            NSString *val = item[@"codeValue"];
+                            NSString *key = item[@"codeId"];
+                            [tempDic3 addEntriesFromDictionary:@{key:val}];
+                        }
+                    }
+                    businessTypeDic = tempDic1;
+                    moneyTypeDic = tempDic2;
+                    statusDic = tempDic3;
+                }
+                // 设置预约状态
+                NSString *statusTypeKey = result[@"yyzt"];
+                NSString *statusVal = statusDic[statusTypeKey];
+                self.appointmentStatus_Label.text = statusVal;
+                if ([statusTypeKey isEqualToString:@"1"]) {
+                    _statusTypesArr = [NSArray arrayWithArray:undealArr];
+                }else if ([statusTypeKey isEqualToString:@"9"]){
+                    _statusTypesArr = [NSArray arrayWithArray:doingArr];
+                }else if ([statusTypeKey isEqualToString:@"6"]){
+                    _statusTypesArr = [NSArray arrayWithArray:doneArr];
+                }
+                self.appointmentStatus_Label.text = [[_statusTypesArr[0] allValues] firstObject];
+                _statusTypesDic = _statusTypesArr[0];
+                
+                // 设置业务类型
+                NSString *busTypeKey = result[@"ywzl"];
+                _businessType = busTypeKey;
+                NSString *busVal = businessTypeDic[busTypeKey];
+                [detailArray replaceObjectAtIndex:0 withObject:busVal];
+                
+                // 设置姓名
+                NSString *nameStr = result[@"khmc"];
+                [detailArray replaceObjectAtIndex:1 withObject:nameStr];
+                
+                // 设置币种
+                NSString *moneyTypeKey = result[@"bz"];
+                NSString *bzValue = moneyTypeDic[moneyTypeKey];
+                [detailArray replaceObjectAtIndex:2 withObject:bzValue];
+                
+                // 设置金额
+                NSString *numberOfMoney = result[@"qxje"];
+                [detailArray replaceObjectAtIndex:3 withObject:numberOfMoney];
+                
+                // 设置手机号
+                NSString *phoneNumber = result[@"yysj"];
+                [detailArray replaceObjectAtIndex:5 withObject:phoneNumber];
+                
+                // 设置备注
+                NSString *remarkStr = result[@"khly"];
+                [detailArray replaceObjectAtIndex:7 withObject:remarkStr];
+                
+                [self componentView];//构建视图
+            }
+        }
+    };
+    
+    [InvokeManager invokeApi:@"otodsxx" withMethod:@"POST" andParameter:paramDic onSuccess:success onFailure:failure];
+}
+
+- (void)componentView
+{
+    scrollview = [[UIScrollView alloc] initWithFrame:CGRectMake(0, 50, 450, 365)];
+    scrollview.scrollEnabled = YES;
+    scrollview.showsHorizontalScrollIndicator = NO;
+    scrollview.showsVerticalScrollIndicator = YES;
+    scrollview.bounces = NO;
+    
+    for (int i=0; i<array1.count; i++) {
+        UILabel *label1 = [[UILabel alloc] init];
+        label1.text = array1[i];
+        label1.font = [UIFont systemFontOfSize:14];
+        label1.textAlignment = NSTextAlignmentRight;
+        label1.textColor = UIColorFromRGB(0x5a5a5a);
+        UILabel *label2 = [[UILabel alloc] init];
+        label2.text = detailArray[i];
+        label2.numberOfLines = 0;
+        label2.font = [UIFont systemFontOfSize:14];
+        label2.textAlignment = NSTextAlignmentLeft;
+        label2.textColor = UIColorFromRGB(0x24344e);
+        CGSize label2size = {0,0};
+        label2size = [detailArray[i] boundingRectWithSize:CGSizeMake(237, MAXFLOAT) options:NSStringDrawingUsesLineFragmentOrigin attributes:@{NSFontAttributeName:[UIFont systemFontOfSize:14]} context:nil].size;
+        if (i == 0) {
+            label1.frame = CGRectMake(65, 15, 120, 30);
+            label2.frame = CGRectMake(215, 15, 237, (label2size.height > 30) ? label2size.height : 30);
+            temporayVar = label2.frame.size.height;
+            
+        }else{
+            label1.frame = CGRectMake(65, 15 + 20 * i + temporayVar, 120, 30);
+            label2.frame = CGRectMake(215, label1.frame.origin.y, 237, (label2size.height > 30) ? label2size.height : 30);
+            temporayVar = label2.frame.size.height + temporayVar;
+        }
+        scrollview.contentSize = CGSizeMake(450, label2.frame.origin.y + ((label2size.height > 30) ? label2size.height : 30));
+        [scrollview addSubview:label1];
+        [scrollview addSubview:label2];
+    }
+    [self addSubview:scrollview];
+}
+
+
+//自定义提示框
+- (void)showMessage:(NSString *)message
+{
+    CGSize size = [message sizeWithAttributes:@{NSFontAttributeName:K_FONT_14}];
+    
+    UIWindow * window = [UIApplication sharedApplication].keyWindow;
+    UIView *showview =  [[UIView alloc] init];
+    CGFloat w = size.width + 30;
+    CGFloat h = size.height + 20;
+    CGFloat x = (window.bounds.size.width - w) / 2;
+    CGFloat y = window.bounds.size.height - h - 50;
+    showview.frame = CGRectMake(x, y, w, h);
+    showview.backgroundColor = RGB(0, 0, 0, 0.7);
+    showview.layer.cornerRadius = 5.0f;
+    showview.layer.masksToBounds = YES;
+    [window addSubview:showview];
+    
+    UILabel *label = [[UILabel alloc] init];
+    label.frame = CGRectMake(0, 0, w, h);
+    label.backgroundColor = [UIColor clearColor];
+    label.textColor = [UIColor whiteColor];
+    label.textAlignment = NSTextAlignmentCenter;
+    label.numberOfLines = 0;
+    label.font = K_FONT_14;
+    label.text = message;
+    [showview addSubview:label];
+    [UIView animateWithDuration:2 animations:^{
+        showview.alpha = 0;
+    } completion:^(BOOL finished) {
+        [showview removeFromSuperview];
+    }];
+}
+
+- (IBAction)sure:(id)sender {
+    [self dealDate];
+}
+
+- (void)dealDate
+{
+    [[CustomIndicatorView sharedView] showInView:self];
+    [[CustomIndicatorView sharedView] startAnimating];
+    
+    NSMutableDictionary *paramDic = [[NSMutableDictionary alloc] init];
+    [paramDic setObject:_pragrames[0] forKey:@"dqdh"];
+    [paramDic setObject:_pragrames[1] forKey:@"jgdh"];
+    [paramDic setObject:_pragrames[2] forKey:@"yybh"];
+    NSString *resultKey = [[_statusTypesDic allKeys] firstObject];
+    [paramDic setObject:resultKey forKey:@"shjg"];
+    NSString *des = self.remak_textview.text;
+    if ([resultKey isEqualToString:@"6"]) {
+        [paramDic setObject:des forKey:@"jgms"];
+    } else {
+        [paramDic setObject:@"" forKey:@"jgms"];
+    }
+    [paramDic setObject:_businessType forKey:@"ywzl"];
+    
+    void(^failure)(NSString *, NSString *) = ^(NSString *responseCode, NSString *responseInfo) {
+        [[CustomIndicatorView sharedView] stopAnimating];
+        NSString *alertInfo = [NSString stringWithFormat:@"错误%@， 网络连接错误", responseCode];
+        [self showMessage:alertInfo];
+    };
+    
+    void(^success)(NSString *, NSString *) = ^(NSString *responseCode, NSString *responseInfo) {
+        [[CustomIndicatorView sharedView] stopAnimating];
+        if ([responseCode isEqualToString:@"I00"]) {
+            NSString *resultCode = [responseInfo valueForKey:@"resultCode"];
+            if ([resultCode isEqualToString:@"0"]) {
+                NSString *result = [responseInfo valueForKey:@"result"];
+                [self showMessage:result];
+                [self.superview removeFromSuperview];
+            }
+        }
+    };
+    
+    [InvokeManager invokeApi:@"otopersMerg2" withMethod:@"POST" andParameter:paramDic onSuccess:success onFailure:failure];
+}
+
+#pragma mark UITextViewDelegate
+
+- (void)textViewDidBeginEditing:(UITextView *)textView{
+    if (![contentText isEqualToString:@""]) {
+        textView.text = contentText;
+    }else{
+        textView.text = @"";
+    }
+    textView.textColor = UIColorFromRGB(0x24344e);
+}
+
+
+- (BOOL)textView:(UITextView *)textView shouldChangeTextInRange:(NSRange)range replacementText:(NSString *)text
+{
+    if (textView.text.length >= 60 && text.length > range.length) {
+        return NO;
+    }
+    return YES;
+}
+
+- (void)textViewDidChange:(UITextView *)textView
+{
+    
+    if (textView.markedTextRange == nil && 60 > 0 && textView.text.length > 60) {
+        textView.text = [textView.text substringToIndex:60];
+    }
+    contentText = textView.text;
+}
+- (void)textViewDidEndEditing:(UITextView *)textView{
+    if ([[textView.text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] isEqualToString:@""] ) {
+        self.remak_textview.textColor = UIColorFromRGB(0xa6a7b1);
+        NSString *content = [NSString stringWithFormat:@"您的现钞预约已备钞，请%@上午来网点办理。您可先通过“服务预约”办理预约取号，免排队。", _dealTime];
+        self.remak_textview.text = content;
+        contentText = @"";
+    }else{
+        contentText = textView.text;
+    }
+}
+
+
+- (IBAction)cancel:(id)sender {
+    [self.superview removeFromSuperview];
+}
+@end

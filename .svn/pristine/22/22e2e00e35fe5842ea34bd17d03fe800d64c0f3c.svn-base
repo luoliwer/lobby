@@ -1,0 +1,24 @@
+//
+//  BlueTeethCellTableViewCell.m
+//  Lobby
+//
+//  Created by CIB-MacMini on 16/4/6.
+//  Copyright © 2016年 swy. All rights reserved.
+//
+
+#import "BlueTeethCellTableViewCell.h"
+
+@implementation BlueTeethCellTableViewCell
+
+- (void)awakeFromNib {
+    [super awakeFromNib];
+    // Initialization code
+}
+
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated {
+    [super setSelected:selected animated:animated];
+
+    // Configure the view for the selected state
+}
+
+@end

@@ -1,0 +1,328 @@
+//
+//  StationSettingView.m
+//  Lobby
+//
+//  Created by cibdev-macmini-1 on 16/3/30.
+//  Copyright © 2016年 swy. All rights reserved.
+//
+
+#import "StationSettingView.h"
+#import "Station.h"
+#import "Branch.h"
+#import "CustomIndicatorView.h"
+#import "UIView+ShowMessage.h"
+
+@interface StationSettingView ()<UITableViewDataSource, UITableViewDelegate>
+{
+    NSMutableArray *_businessContainsArray;
+    NSArray *_sectionTitles;
+    NSArray *_combinations;
+    NSInteger _selectedIndex;//通过该值来获取选中的组合
+}
+@property (weak, nonatomic) IBOutlet UIButton *showMoreBus;
+@property (weak, nonatomic) IBOutlet UILabel *stationIntroduce;
+@property (weak, nonatomic) IBOutlet UILabel *business;
+@property (weak, nonatomic) IBOutlet UIButton *moreBusiness;
+@property (weak, nonatomic) IBOutlet UITableView *businessContainsTable;
+@property (weak, nonatomic) IBOutlet UITableView *conbinationsTable;
+@property (weak, nonatomic) IBOutlet NSLayoutConstraint *conbinatonTableHeightContraints;
+
+@end
+
+@implementation StationSettingView
+
+- (void)awakeFromNib
+{
+    [super awakeFromNib];
+    _businessContainsArray = [NSMutableArray arrayWithObjects:@[], @[], nil];
+    _sectionTitles = @[@"可办业务", @"服务队列"];
+    _combinations = COM_INSTANCE.callRuleGroupOfBranch;
+    
+    self.layer.cornerRadius = 5;
+    self.clipsToBounds = YES;
+    
+    _conbinationsTable.dataSource = self;
+    _conbinationsTable.delegate = self;
+    _conbinationsTable.backgroundColor = RGB(230, 235, 241, 1.0);
+    _conbinationsTable.hidden = YES;
+    
+    _businessContainsTable.dataSource = self;
+    _businessContainsTable.delegate = self;
+    _businessContainsTable.separatorStyle = UITableViewCellSeparatorStyleNone;
+    _businessContainsTable.backgroundColor = RGB(238, 243, 246, 1.0);
+}
+
+//- (void)didMoveToSuperview
+//{
+//    if (_combinations.count == 0) {
+//        [self invokeBranchCombination];
+//    }
+//}
+
+- (void)setStation:(Station *)station
+{
+    _station = station;
+    
+    NSString *introduce = [NSString stringWithFormat:@"%@号窗口 %@", _station.stationNo, _station.tellerName];
+    _stationIntroduce.text = introduce;
+    
+    NSArray *temp = COM_INSTANCE.callRuleGroupOfBranch;
+    for (NSDictionary *dic in temp) {
+        NSString *val = [dic valueForKey:@"callrule_id"];
+        if ([_station.callRuleID isEqualToString:val]) {
+            
+            _business.text = [dic valueForKey:@"callrule_name"];
+            [self invokeStationRule:_station.callRuleID];
+            break;
+        }
+    }
+}
+
+- (void)invokeStationRule:(NSString *)callRuleId
+{
+    [[CustomIndicatorView sharedView] showInView:self];
+    [[CustomIndicatorView sharedView] startAnimating];
+    NSMutableDictionary *paramDic = [[NSMutableDictionary alloc] init];
+    [paramDic setObject:callRuleId forKey:@"callrule_id"];
+    
+    
+    void(^failure)(NSString *, NSString *) = ^(NSString *responseCode, NSString *responseInfo) {
+        [[CustomIndicatorView sharedView] stopAnimating];
+    };
+    
+    void(^success)(NSString *, NSString *) = ^(NSString *responseCode, NSString *responseInfo) {
+        
+        if ([responseCode isEqualToString:@"I00"]) {
+            NSString *resultCode = [responseInfo valueForKey:@"resultCode"];
+            if ([resultCode isEqualToString:@"0"]) {
+                
+                id result = [responseInfo valueForKey:@"result"];
+                if ([responseInfo isKindOfClass:[NSDictionary class]]) {
+                    [_businessContainsArray removeAllObjects];
+                    NSDictionary *resultDic = (NSDictionary *)result;
+                    id busiGroup = [resultDic valueForKey:@"kbBusiGroup"];
+                    if ([busiGroup isKindOfClass:[NSArray class]]) {
+                        NSArray *temp = (NSArray *)busiGroup;
+                        [_businessContainsArray addObject:temp];
+                    }
+                    
+                    id queueGroup = [resultDic valueForKey:@"kbQueGroup"];
+                    if ([queueGroup isKindOfClass:[NSArray class]]) {
+                        NSArray *temp = (NSArray *)queueGroup;
+                        [_businessContainsArray addObject:temp];
+                    }
+                    
+                    [_businessContainsTable reloadData];
+                }
+            } else {
+                
+            }
+        }
+        [[CustomIndicatorView sharedView] stopAnimating];
+    };
+    
+    [InvokeManager invokeApi:@"ibpnrcx" withMethod:@"POST" andParameter:paramDic onSuccess:success onFailure:failure];
+
+}
+
+- (void)updateStationCallRule
+{
+    [[CustomIndicatorView sharedView] showInView:self];
+    [[CustomIndicatorView sharedView] startAnimating];
+    NSMutableDictionary *paramDic = [[NSMutableDictionary alloc] init];
+    [paramDic setObject:COM_INSTANCE.currentBranch.branchNo forKey:@"branch"];
+    [paramDic setObject:_station.qmNum forKey:@"qm_num"];
+    [paramDic setObject:_station.stationNo forKey:@"win_num"];
+    NSDictionary *dic = _combinations[_selectedIndex];
+    NSString *callId = [dic valueForKey:@"callrule_id"];
+    [paramDic setObject:callId forKey:@"callrule_id"];
+    
+    void(^failure)(NSString *, NSString *) = ^(NSString *responseCode, NSString *responseInfo) {
+        [[CustomIndicatorView sharedView] stopAnimating];
+        [self dismiss];
+    };
+    
+    void(^success)(NSString *, NSString *) = ^(NSString *responseCode, NSString *responseInfo) {
+        
+        if ([responseCode isEqualToString:@"I00"]) {
+            NSString *resultCode = [responseInfo valueForKey:@"resultCode"];
+            if ([resultCode isEqualToString:@"000000"]) {//修改成功
+                _station.callRuleID = callId;
+                if (_rebackHandleResult) {
+                    _rebackHandleResult(@"工位信息修改成功");
+                }
+            } else {
+                NSString *result = [responseInfo valueForKey:@"result"];
+                if (_rebackHandleResult) {
+                    _rebackHandleResult(result);
+                }
+            }
+        }
+        [[CustomIndicatorView sharedView] stopAnimating];
+        [self dismiss];
+    };
+    
+    [InvokeManager invokeApi:@"ibpgwxg" withMethod:@"POST" andParameter:paramDic onSuccess:success onFailure:failure];
+}
+
+#pragma mark UITableView数据源和代理
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
+{
+    if (tableView.tag == 101) {
+        return _sectionTitles.count;
+    } else {
+        return 1;
+    }
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
+{
+    if (tableView.tag == 101) {
+        if (section == 0) {
+            return [_businessContainsArray[0] count];
+        } else {
+            return [_businessContainsArray[1] count];
+        }
+    } else {
+        return _combinations.count;
+    }
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section
+{
+    if (tableView.tag == 101) {
+        return 34;
+    }
+    return 0;
+}
+
+- (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section
+{
+    UIView *view = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 34)];
+    view.backgroundColor = RGB(239, 242, 247, 1.0);
+    
+    UIView *topline = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.frame.size.width, 1)];
+    topline.backgroundColor = RGB(220, 220, 220, 1.0);
+    [view addSubview:topline];
+    
+    UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake(20, 0, 200, 34)];
+    title.backgroundColor = [UIColor clearColor];
+    title.text = _sectionTitles[section];
+    title.font = K_FONT_13;
+    title.textColor = RGB(90, 90, 90, 1.0);
+    [view addSubview:title];
+    
+    UIView *line = [[UIView alloc] initWithFrame:CGRectMake(0, 33, tableView.frame.size.width, 1)];
+    line.backgroundColor = RGB(220, 220, 220, 1.0);
+    [view addSubview:line];
+    
+    return view;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    if (tableView.tag == 101) {
+        return 35;
+    }
+    return 35;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    if (tableView.tag == 101) {
+        static NSString *ID = @"BusinessCell";
+        UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:ID];
+        if (cell == nil) {
+            cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:ID];
+            cell.backgroundColor = RGB(231, 234, 243, 1.0);
+            cell.textLabel.textAlignment = NSTextAlignmentCenter;
+            cell.textLabel.font = K_FONT_13;
+            cell.textLabel.textColor = RGB(90, 90, 90, 1.0);
+            cell.selectionStyle = UITableViewCellSelectionStyleNone;
+        }
+        
+        NSInteger section = indexPath.section;
+        NSInteger row = indexPath.row;
+        NSDictionary *dic = _businessContainsArray[section][row];
+        
+        if (indexPath.section == 0) {//业务
+            cell.textLabel.text = [dic valueForKey:@"kbbs_name"];
+        } else {//队列
+            cell.textLabel.text = [dic valueForKey:@"kbqu_name"];
+        }
+        
+        return cell;
+    } else {
+        static NSString *ID = @"CombinationCell";
+        UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:ID];
+        if (cell == nil) {
+            cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:ID];
+            cell.backgroundColor = RGB(231, 234, 243, 1.0);
+            cell.textLabel.textAlignment = NSTextAlignmentCenter;
+            cell.textLabel.font = K_FONT_13;
+            cell.textLabel.textColor = RGB(90, 90, 90, 1.0);
+            cell.selectionStyle = UITableViewCellSelectionStyleNone;
+        }
+        
+        NSInteger row = indexPath.row;
+        NSDictionary *dic = _combinations[row];
+        cell.textLabel.text = [dic valueForKey:@"callrule_name"];
+        
+        return cell;
+    }
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    if (tableView.tag == 102) {
+        NSInteger row = indexPath.row;
+        _selectedIndex = row;
+        NSString *val = [_combinations[row] valueForKey:@"callrule_name"];
+        _business.text = val;
+        
+        NSString *ruleID = [_combinations[row] valueForKey:@"callrule_id"];
+        [self invokeStationRule:ruleID];
+        
+        [self showConbinationsTable:NO];
+        _moreBusiness.selected = NO;
+        _showMoreBus.selected = NO;
+    }
+}
+
+#pragma mark 选择更多的业务组合类型
+- (IBAction)moreBusinessBtnClicked:(UIButton *)sender
+{
+    [self showConbinationsTable:!sender.isSelected];
+    _moreBusiness.selected = !sender.isSelected;
+    sender.selected = !sender.isSelected;
+    
+}
+
+- (void)showConbinationsTable:(BOOL)show
+{
+    if (show) {
+        _conbinationsTable.hidden = NO;
+        _conbinatonTableHeightContraints.constant = 136;
+    } else {
+        _conbinatonTableHeightContraints.constant = 0;
+        _conbinationsTable.hidden = YES;
+    }
+}
+
+#pragma mark 确定取消事件
+- (IBAction)confirm:(UIButton *)sender
+{
+    [self updateStationCallRule];
+}
+
+- (IBAction)cancel:(UIButton *)sender
+{
+    [self dismiss];
+}
+
+- (void)dismiss
+{
+    [self.superview removeFromSuperview];
+}
+
+@end

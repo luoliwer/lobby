@@ -1,0 +1,25 @@
+//
+//  SmartHall-Prefix.pch
+//  SmartHall
+//
+//  Created by YangChao on 19/10/15.
+//  Copyright (c) 2015年 cdrcb. All rights reserved.
+//
+
+#ifndef Lobby_Prefix_pch
+#define Lobby_Prefix_pch
+
+// Include any system framework and library headers here that should be included in all compilation units.
+// You will also need to set the Prefix Header build setting of one or more of your targets to reference this file.
+#import "UIView+MJ.h"
+#import "CommonUtils.h"
+#import "SmartHallConfig.h"
+#import "BaseViewController.h"
+#import "GlobleData.h"
+#import <UIKit/UIKit.h>
+#import <MobileCoreServices/MobileCoreServices.h>
+#import <SystemConfiguration/SystemConfiguration.h>
+#import <CIBBaseSDK/CIBBaseSDK.h>
+
+
+#endif

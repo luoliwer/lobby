@@ -1,0 +1,117 @@
+//
+//  ListView.m
+//  Lobby
+//
+//  Created by cibdev-macmini-1 on 16/10/12.
+//  Copyright © 2016年 swy. All rights reserved.
+//
+
+#import "ListView.h"
+
+CGFloat const CellHeight = 30.0f;
+
+@interface ListView ()<UITableViewDataSource, UITableViewDelegate>
+{
+    UITableView *_listTable;
+}
+
+@end
+
+@implementation ListView
+
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+        
+        _listTable = [[UITableView alloc] init];
+        _listTable.dataSource = self;
+        _listTable.delegate = self;
+        _listTable.separatorStyle = UITableViewCellSeparatorStyleNone;
+        
+        [self addSubview:_listTable];
+        
+        self.layer.borderWidth = 1;
+        self.layer.borderColor = [UIColor lightGrayColor].CGColor;
+        self.layer.cornerRadius = 8;
+        self.clipsToBounds = YES;
+    }
+    
+    return self;
+}
+
+- (instancetype)init
+{
+    return [self initWithFrame:CGRectZero];
+}
+
+- (void)setFrame:(CGRect)frame
+{
+    [super setFrame:frame];
+    
+    [self layoutIfNeeded];
+}
+
+- (void)layoutSubviews
+{
+    [super layoutSubviews];
+    
+    //设置尺寸
+    _listTable.frame = CGRectMake(0, 0, self.frame.size.width, self.frame.size.height);
+}
+
+- (void)setListItems:(NSArray *)listItems
+{
+    _listItems = listItems;
+    
+    self.frame = CGRectMake(self.frame.origin.x, self.frame.origin.y, self.frame.size.width, CellHeight * _listItems.count);
+    
+    [_listTable reloadData];
+}
+
+#pragma mark -- UITableViewDataSource & delegate
+
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
+{
+    return 1;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
+{
+    return _listItems.count;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    return CellHeight;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    static NSString *ID = @"ListCell";
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:ID];
+    
+    if (!cell) {
+        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:ID];
+        cell.textLabel.textAlignment = NSTextAlignmentRight;
+        cell.selectionStyle = UITableViewCellSelectionStyleNone;
+        
+        cell.textLabel.font = K_FONT_11;
+    }
+    
+    NSDictionary *dic = _listItems[indexPath.row];
+    cell.textLabel.text = [[dic allValues] firstObject];
+    
+    return cell;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    NSDictionary *val = _listItems[indexPath.row];
+    
+    if (_listViewSelectedValue) {
+        _listViewSelectedValue(val);
+    }
+}
+
+@end

@@ -1,0 +1,20 @@
+//
+//  DetailBaseViewController.h
+//  SmartHall
+//
+//  Created by cibdev-macmini-1 on 16/3/18.
+//  Copyright © 2016年 swy. All rights reserved.
+//
+
+#import "BaseViewController.h"
+#import "SwySplitViewController.h"
+
+@interface DetailBaseViewController : BaseViewController
+
+@property (nonatomic, weak) SwySplitViewController *splitVc;
+
+@property (nonatomic, weak) id masterCell;
+
+@property (nonatomic, assign) BOOL topInWindow;
+
+@end

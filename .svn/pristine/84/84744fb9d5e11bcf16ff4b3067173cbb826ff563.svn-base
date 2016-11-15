@@ -1,0 +1,545 @@
+//
+//  DateHomeController.m
+//  Lobby
+//
+//  Created by cibdev-macmini-1 on 16/10/10.
+//  Copyright © 2016年 swy. All rights reserved.
+//
+
+#import "DateHomeController.h"
+#import "FDCalendar.h"
+#import "DateCustCell.h"
+#import "PublicAppointmentView.h"
+#import "PrivateAppointmentView.h"
+#import "CommonAlertView.h"
+#import "ListView.h"
+#import "CommonUtils.h"
+#import "Branch.h"
+#import "DateInfo.h"
+#import "CustomIndicatorView.h"
+
+@interface DateHomeController ()<FDCalendarDelegate,UIGestureRecognizerDelegate, UITableViewDataSource, UITableViewDelegate>
+{
+    FDCalendar* startCalendar;
+    FDCalendar* endCalendar;
+    
+    ListView *_listView;
+    //分页变量
+    NSInteger currentPage;
+    NSInteger totalPages;
+    NSInteger perpageNum;
+    
+    NSMutableArray *_dates;
+    
+    NSArray *_dateTypes;
+    NSArray *_statusTypes;
+    
+    NSDictionary *_dateTypeDic;
+    NSDictionary *_statusTypeDic;
+    
+    //查询条件变量
+    NSString *_dqdh;
+    NSString *_jgdh;
+    NSString *_czgn;
+    NSString *_ywlxjh;
+    NSString *_ywztjh;
+    NSString *_qssj;
+    NSString *_jzsj;
+    NSString *_cxym;
+    
+    //是否展示动画效果
+    BOOL _showAnimation;
+}
+@property (weak, nonatomic) IBOutlet UILabel *leftDateLabel;
+@property (weak, nonatomic) IBOutlet UILabel *rightDateLabel;
+@property (weak, nonatomic) IBOutlet UILabel *leftWeekLabel;
+@property (weak, nonatomic) IBOutlet UILabel *rightWeekLabel;
+@property (weak, nonatomic) IBOutlet UIButton *dateTypeBtn;
+@property (weak, nonatomic) IBOutlet UIButton *handleTypeBtn;
+
+@property (weak, nonatomic) IBOutlet UIView *toolView;
+@property (weak, nonatomic) IBOutlet UITableView *datesListTable;
+@end
+
+@implementation DateHomeController
+
+- (void)componentDateTypeAndStatusType
+{
+    _dateTypes = @[@{@"11,13,14":@"全部"},
+                   @{@"11":@"对公预约"},
+                   @{@"13":@"对私人民币预约"},
+                   @{@"14":@"对私外币预约"}
+                   ];
+    _statusTypes = @[@{@"1":@"全部"},
+                    @{@"1":@"未受理"}
+                    ];
+    _showAnimation = YES;
+    _statusTypeDic = _statusTypes[1];
+    _dateTypeDic = _dateTypes[0];
+    NSString *value = [[_dateTypeDic allValues] firstObject];
+    [_dateTypeBtn setTitle:value forState:UIControlStateNormal];
+    NSString *statusValue = [[_statusTypeDic allValues] firstObject];
+    [_handleTypeBtn setTitle:statusValue forState:UIControlStateNormal];
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    
+    _dates = [[NSMutableArray alloc] init];
+    perpageNum = 10;
+    currentPage = 1;
+    
+    //设置默认的值
+    [self componentDateTypeAndStatusType];
+    //初始化时间
+    NSDate *date = [NSDate date];
+    NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+    [dateFormatter setDateFormat:@"yyyy-MM-dd"];
+    NSString *endDate = [dateFormatter stringFromDate:date];
+    NSTimeInterval inteval = [date timeIntervalSince1970];
+    NSDate *begindate = [NSDate dateWithTimeIntervalSince1970:(inteval - 7*24*3600)];
+    NSString *beginDate = [dateFormatter stringFromDate:begindate];
+    self.leftDateLabel.text = beginDate;
+    self.rightDateLabel.text = endDate;
+    //初始化星期
+    self.rightWeekLabel.text =  [FDCalendar getWeekday:date];
+    self.leftWeekLabel.text = [FDCalendar getWeekday:[NSDate dateWithTimeIntervalSince1970:[date timeIntervalSince1970]]];
+    
+    //添加手势处理
+    UITapGestureRecognizer *recognizer = [[UITapGestureRecognizer alloc] initWithTarget:nil action:nil];
+    recognizer.delegate = self;
+    [self.view addGestureRecognizer:recognizer];
+    
+    [self showAnimation:_showAnimation];
+    [self allDates];
+}
+
+#pragma mark -- 日期选择事件
+- (IBAction)startDateAction:(id)sender
+{
+    if (_listView) {
+        [_listView removeFromSuperview];
+    }
+    if(!startCalendar){
+        startCalendar = [[FDCalendar alloc] initWithCurrentDate:[NSDate dateWithTimeIntervalSince1970:[[NSDate date] timeIntervalSince1970] ]];
+        startCalendar.delegate=self;
+        [startCalendar showCalendarWithClickControl:sender inView:self.view];
+    }else{
+        startCalendar.hidden=NO;
+    }
+}
+
+- (IBAction)endDateAction:(id)sender
+{
+    if (_listView) {
+        [_listView removeFromSuperview];
+    }
+    if(!endCalendar){
+        endCalendar = [[FDCalendar alloc] initWithCurrentDate:[NSDate date]];
+        endCalendar.delegate=self;
+        [endCalendar showCalendarWithClickControl:sender inView:self.view];
+    }else{
+        endCalendar.hidden=NO;
+    }
+}
+
+#pragma mark -- 条件查询预约
+- (IBAction)search:(id)sender
+{
+    _showAnimation = YES;
+    [self showAnimation:_showAnimation];
+    //清空原数组
+    [_dates removeAllObjects];
+    [self allDates];
+}
+
+#pragma mark -- 加载数据动画展示
+- (void)showAnimation:(BOOL)show
+{
+    if (show) {
+        CustomIndicatorView *indicatorView = [CustomIndicatorView sharedView];
+        [indicatorView showInView:self.view];
+        [indicatorView startAnimating];
+    }
+}
+
+- (void)stopAnimation
+{
+    if ([[CustomIndicatorView sharedView] isAnimating]) {
+        [[CustomIndicatorView sharedView] stopAnimating];
+    }
+}
+
+#pragma mark --FDCalendarDelegate
+- (void)refreshWithData:(NSString *)date weekDay:(NSString *)weekDay{
+    if(startCalendar && startCalendar.hidden==NO){
+        //验证日期大小
+        int compareResult = [FDCalendar compareWithDate:date anthorDate:self.rightDateLabel.text];
+        if(compareResult == 1){
+            [self showAlert];
+            return;
+        }
+        self.leftDateLabel.text=date;
+        self.leftWeekLabel.text=weekDay;
+        [self performSelector:@selector(hideCalendar:) withObject:startCalendar afterDelay:0.2];
+    }else if(endCalendar && endCalendar.hidden==NO){
+        //验证日期大小
+        int compareResult = [FDCalendar compareWithDate:date anthorDate:self.leftDateLabel.text];
+        if(compareResult == -1){
+            [self showAlert];
+            return;
+        }
+        NSDate *todayDate = [NSDate date];
+        NSDateFormatter *newmatter = [[NSDateFormatter alloc] init];
+        [newmatter setDateFormat:@"yyyy-MM-dd"];
+        NSString *dateStr = [newmatter stringFromDate:todayDate];
+        int compareResult1 = [FDCalendar compareWithDate:date anthorDate:dateStr];
+        if (compareResult1 == 1) {
+            UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"警告" message:@"截止日期不能大于今天日期" delegate:self cancelButtonTitle:@"确定" otherButtonTitles: nil];
+            [alert show];
+            return;
+        }
+        self.rightDateLabel.text=date;
+        self.rightWeekLabel.text=weekDay;
+        [self performSelector:@selector(hideCalendar:) withObject:endCalendar afterDelay:0.2];
+    }
+}
+-(void) hideCalendar:(FDCalendar*) calendar{
+    calendar.hidden=YES;
+}
+-(void) showAlert{
+    UIAlertView* alert =[[UIAlertView alloc]initWithTitle:@"警告" message:@"开始日期不能大于结束日期" delegate:nil cancelButtonTitle:@"确定" otherButtonTitles:nil, nil];
+    [alert show];
+}
+
+#pragma mark - Handling Touches
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldReceiveTouch:(UITouch *)touch {
+    BOOL isExist = NO;
+    if(startCalendar && startCalendar.hidden==NO){
+        CGPoint p = [touch locationInView:self.view];
+        CGRect rect = [startCalendar.superview convertRect:startCalendar.frame toView:self.view];
+        if(CGRectContainsPoint(rect, p)){
+            return NO;
+        }
+        isExist=YES;
+    }
+    
+    if(endCalendar && endCalendar.hidden==NO){
+        CGPoint p1 = [touch locationInView:self.view];
+        CGRect rect1 = [endCalendar.superview convertRect:endCalendar.frame toView:self.view];
+        if(CGRectContainsPoint(rect1, p1)){
+            return NO;
+        }
+        isExist=YES;
+    }
+    if(isExist){
+        if(startCalendar){
+            startCalendar.hidden=YES;
+        }
+        if(endCalendar){
+            endCalendar.hidden=YES;
+        }
+        return YES;
+    }
+    
+    
+    return NO;
+}
+
+- (void)touchesCancelled:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
+{
+    if (_listView) {
+        
+        CGPoint p = [[touches anyObject] locationInView:self.view];
+        
+        CGRect rectInList = [_dateTypeBtn.superview convertRect:_dateTypeBtn.frame toView:self.view];
+        
+        CGRect rectInList2 = [_handleTypeBtn.superview convertRect:_handleTypeBtn.frame toView:self.view];
+        
+        if (CGRectContainsPoint(rectInList, p) || CGRectContainsPoint(rectInList2, p)) {
+            
+        } else {
+            [_listView removeFromSuperview];
+        }
+    }
+}
+// 将yyyyMMdd格式的日期转化成yyyy-MM-dd格式的日期
+- (NSString *)dateFormatterTransfer:(NSString *)dateString{
+    
+    NSDateFormatter *formatter=[[NSDateFormatter alloc] init];
+    [formatter setDateFormat:@"yyyyMMdd"];
+    NSDate *date = [formatter dateFromString:dateString];
+    NSDateFormatter *newmatter = [[NSDateFormatter alloc] init];
+    [newmatter setDateFormat:@"yyyy-MM-dd"];
+    NSString *dateStr = [newmatter stringFromDate:date];
+    return dateStr;
+    
+}
+// 将yyyy-MM-dd格式的日期转化成yyyyMMdd格式的日期
+- (NSString *)dateTransfer:(NSString *)dateStr{
+    
+    NSDateFormatter *formatter=[[NSDateFormatter alloc] init];
+    [formatter setDateFormat:@"yyyy-MM-dd"];
+    NSDate *date = [formatter dateFromString:dateStr];
+    NSDateFormatter *newmatter = [[NSDateFormatter alloc] init];
+    [newmatter setDateFormat:@"yyyyMMdd"];
+    NSString *dateString = [newmatter stringFromDate:date];
+    return dateString;
+    
+}
+
+#pragma mark -- ListView 下拉框选择
+
+- (IBAction)dateTypeListSelected:(UIButton *)sender
+{
+    //初始化
+    if (!_listView) {
+        _listView = [[ListView alloc] init];
+    }
+    
+    __block NSInteger tag = sender.tag;
+
+    __block DateHomeController *weakSelf = self;
+    CGFloat x = CGRectGetMaxX(sender.frame);
+    CGFloat y = CGRectGetMaxY(sender.frame);
+    
+    [_listView removeFromSuperview];
+    
+    _listView.frame = CGRectMake(x - 110, y + 5, 120, 200);
+    
+    _listView.listItems = _dateTypes;
+    
+    _listView.listViewSelectedValue = ^(NSDictionary *val) {
+        [weakSelf selectedValueToButton:tag value:val];
+    };
+    
+    [self.view addSubview:_listView];
+}
+
+- (IBAction)HandleTypelistSelected:(UIButton *)sender
+{
+    //初始化
+    if (!_listView) {
+        _listView = [[ListView alloc] init];
+    }
+    
+    __block NSInteger tag = sender.tag;
+    __block DateHomeController *weakSelf = self;
+    CGFloat x = CGRectGetMaxX(sender.frame);
+    CGFloat y = CGRectGetMaxY(sender.frame);
+    
+    [_listView removeFromSuperview];
+    
+    _listView.frame = CGRectMake(x - 50, y + 5, 70, 100);
+    _listView.listItems = _statusTypes;
+    
+    _listView.listViewSelectedValue = ^(NSDictionary *val) {
+        [weakSelf selectedValueToButton:tag value:val];
+    };
+    
+    [self.view addSubview:_listView];
+}
+
+- (void)selectedValueToButton:(NSInteger)tag value:(NSDictionary *)val
+{
+    if (tag == 101) {
+        NSString *value = [[val allValues] firstObject];
+        [_dateTypeBtn setTitle:value forState:UIControlStateNormal];
+        _dateTypeDic = val;
+        if ([value isEqualToString:@"全部"]) {
+            _statusTypes = @[@{@"1":@"全部"},
+                             @{@"1":@"未受理"}
+                             ];
+        } else if ([value isEqualToString:@"对公预约"]) {
+            _statusTypes = @[@{@"1,2,4,6,7,8,9":@"全部"},
+                             @{@"1":@"未受理"},
+                             @{@"2":@"已受理"},
+                             @{@"4":@"已作废"},
+                             @{@"6":@"审核通过"},
+                             @{@"7":@"审核不通过"},
+                             @{@"8":@"审核不通过并修改"},
+                             @{@"9":@"处理中"}
+                             ];
+        } else if ([value isEqualToString:@"对私人民币预约"]) {
+            _statusTypes = @[@{@"1,2,4,6,7,9":@"全部"},
+                             @{@"1":@"未受理"},
+                             @{@"2":@"提取完成"},
+                             @{@"4":@"客户放弃"},
+                             @{@"6":@"已备钞待提取"},
+                             @{@"7":@"无法满足客户需求"},
+                             @{@"9":@"正在备钞"}
+                             ];
+        } else if ([value isEqualToString:@"对私外币预约"]) {
+            _statusTypes = @[@{@"1,2,4,6,7,9":@"全部"},
+                             @{@"1":@"未受理"},
+                             @{@"2":@"提取完成"},
+                             @{@"4":@"客户放弃"},
+                             @{@"6":@"已备钞待提取"},
+                             @{@"7":@"无法满足客户需求"},
+                             @{@"9":@"正在备钞"}
+                             ];
+        }
+    } else if (tag == 102) {
+        NSString *value = [[val allValues] firstObject];
+        [_handleTypeBtn setTitle:value forState:UIControlStateNormal];
+        _statusTypeDic = val;
+    }
+    [_listView removeFromSuperview];
+}
+
+#pragma mark -- UITableViewDataSource & delegate
+
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
+{
+    return _dates.count;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForFooterInSection:(NSInteger)section
+{
+    return 12.0f;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
+{
+    return 1;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    return 120.0f;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    static NSString *ID = @"DateCell";
+    DateCustCell *cell = [tableView dequeueReusableCellWithIdentifier:ID];
+    
+    if (cell == nil) {
+        cell = [[[NSBundle mainBundle] loadNibNamed:@"DateCustCell" owner:nil options:nil] firstObject];
+        cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    }
+    
+    DateInfo *date = _dates[indexPath.section];
+    cell.date = date;
+    
+    cell.detailOrHandleEvent = ^(DateCustCell *someOneCell){
+        if ([someOneCell.date.businessType isEqualToString:@"11"]) {
+            PublicAppointmentView *publicView = (PublicAppointmentView *)[[[NSBundle mainBundle] loadNibNamed:@"PublicAppointmentView" owner:nil options:nil] firstObject];
+            DateInfo *selectedDate = someOneCell.date;
+            NSArray *pra = @[COM_INSTANCE.currentBranch.areaCode, COM_INSTANCE.currentBranch.branchCode, selectedDate.businessType, selectedDate.dateNO];
+            publicView.pragrames = pra;
+            
+            CommonAlertView *baseView = [[CommonAlertView alloc] init];
+            baseView.view = publicView;
+            [baseView show];
+        } else {
+            PrivateAppointmentView *privateView = (PrivateAppointmentView *)[[[NSBundle mainBundle] loadNibNamed:@"PrivateAppointmentView" owner:nil options:nil] firstObject];
+            
+            CommonAlertView *baseView = [[CommonAlertView alloc] init];
+            baseView.view = privateView;
+            [baseView show];
+        }
+    };
+    
+    return cell;
+}
+
+#pragma mark -- 接口数据处理
+
+- (void)allDates {
+    NSMutableDictionary *paramDic = [[NSMutableDictionary alloc] init];
+    
+    //调用数据接口
+    _dqdh = COM_INSTANCE.currentBranch.areaCode;
+    _jgdh = COM_INSTANCE.currentBranch.branchCode;
+    _czgn = @"1";
+    _ywlxjh = [[_dateTypeDic allKeys] firstObject];
+    _ywztjh = [[_statusTypeDic allKeys] firstObject];
+    _qssj = [self.leftDateLabel.text stringByReplacingOccurrencesOfString:@"-" withString:@""];
+    _jzsj = [self.rightDateLabel.text stringByReplacingOccurrencesOfString:@"-" withString:@""];
+    _cxym = [NSString stringWithFormat:@"%ld", (long)currentPage];
+    
+    [paramDic setObject:_dqdh forKey:@"dqdh"];
+    [paramDic setObject:_jgdh forKey:@"jgdh"];
+    [paramDic setObject:_czgn forKey:@"czgn"];
+    [paramDic setObject:_ywlxjh forKey:@"ywlxjh"];
+    [paramDic setObject:_ywztjh forKey:@"ywztjh"];
+    [paramDic setObject:@"" forKey:@"zjlx"];
+    [paramDic setObject:@"" forKey:@"zjhm"];
+    [paramDic setObject:@"" forKey:@"sjhm"];
+    [paramDic setObject:_qssj forKey:@"qssj"];
+    [paramDic setObject:_jzsj forKey:@"jzsj"];
+    [paramDic setObject:_cxym forKey:@"cxym"];
+    
+    __block DateHomeController *blockSelf = self;
+    
+    void(^failure)(NSString *, NSString *) = ^(NSString *responseCode, NSString *responseInfo) {
+        
+        if (_showAnimation) {
+            [blockSelf stopAnimation];
+        }
+        
+        NSString *alertInfo = [NSString stringWithFormat:@"错误%@， 网络连接错误", responseCode];
+        [blockSelf showMessage:alertInfo];
+    };
+    
+    void(^success)(NSString *, NSString *) = ^(NSString *responseCode, NSString *responseInfo) {
+        
+        if (_showAnimation) {
+            [blockSelf stopAnimation];
+        }
+        
+        if ([responseCode isEqualToString:@"I00"]) {
+            NSString *resultCode = [responseInfo valueForKey:@"resultCode"];
+            if ([resultCode isEqualToString:@"0"]) {
+                NSDictionary *result = [responseInfo valueForKey:@"result"];
+                NSArray *datesArray = [result valueForKey:@"bsInfoGroup"];
+                NSString *totalpage = [result valueForKey:@"zym"];
+                totalPages = [totalpage integerValue];
+                
+                if ([datesArray count] > 0) {
+                    currentPage ++;
+                    for (NSDictionary *dic in datesArray) {
+                        DateInfo *date = [[DateInfo alloc] init];
+                        date.dateNO = dic[@"yybh"];
+                        date.cardType = dic[@"zjlx"];
+                        date.cardNum = dic[@"zjhm"];
+                        date.businessType = dic[@"ywlx"];
+                        date.dateStatus = dic[@"yyzt"];
+                        date.custName = dic[@"khmc"];
+                        date.phoneNum = dic[@"yysj"];
+                        date.dateArea = dic[@"yydq"];
+                        date.dateBranch = dic[@"yyjg"];
+                        date.accountShot = dic[@"zhdh"];
+                        date.createTime = dic[@"cjsj"];
+                        date.dateTime = dic[@"yysj"];
+                        
+                        [_dates addObject:date];
+                    }
+                    if (currentPage <= totalPages) {
+                        [blockSelf allDates];
+                    } else {
+                        [_datesListTable reloadData];
+                    }
+                } else {
+                    [_datesListTable reloadData];
+                }
+            }
+        } else if ([responseCode isEqualToString:@"I03"] || [responseCode isEqualToString:@"I02"]) {
+            
+            if (_showAnimation) {
+                [blockSelf stopAnimation];
+            }
+            
+            [self.navigationController popToRootViewControllerAnimated:YES];
+        }
+    };
+    
+    [InvokeManager invokeApi:@"otojcxx" withMethod:@"POST" andParameter:paramDic onSuccess:success onFailure:failure];
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+}
+
+@end

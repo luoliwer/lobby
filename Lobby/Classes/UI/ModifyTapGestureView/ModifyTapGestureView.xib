@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="9532" systemVersion="15D21" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES">
+    <dependencies>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="9530"/>
+    </dependencies>
+    <objects>
+        <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner"/>
+        <placeholder placeholderIdentifier="IBFirstResponder" id="-2" customClass="UIResponder"/>
+        <view contentMode="scaleToFill" id="iN0-l3-epB" customClass="ModifyTapGestureView">
+            <rect key="frame" x="0.0" y="0.0" width="450" height="500"/>
+            <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+            <subviews>
+                <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="OsJ-Ss-8at">
+                    <rect key="frame" x="0.0" y="0.0" width="450" height="50"/>
+                    <subviews>
+                        <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="修 改 解 锁 手 势" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="kJ6-Wr-TAs">
+                            <rect key="frame" x="125" y="14" width="200" height="21"/>
+                            <fontDescription key="fontDescription" type="boldSystem" pointSize="16"/>
+                            <color key="textColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+                            <nil key="highlightedColor"/>
+                        </label>
+                        <imageView userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" image="btn_popback" translatesAutoresizingMaskIntoConstraints="NO" id="Fez-qQ-duR">
+                            <rect key="frame" x="15" y="15" width="18" height="20"/>
+                        </imageView>
+                        <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="tJB-GF-53E">
+                            <rect key="frame" x="8" y="10" width="46" height="30"/>
+                            <connections>
+                                <action selector="backToSettingView:" destination="iN0-l3-epB" eventType="touchUpInside" id="eqS-yz-5kE"/>
+                            </connections>
+                        </button>
+                    </subviews>
+                    <color key="backgroundColor" red="0.0" green="0.53333333329999999" blue="0.82352941180000006" alpha="1" colorSpace="calibratedRGB"/>
+                </view>
+                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="请绘制旧手势密码" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="P9f-a5-cuV">
+                    <rect key="frame" x="25" y="90" width="400" height="20"/>
+                    <constraints>
+                        <constraint firstAttribute="width" constant="400" id="5kv-Ba-rQL"/>
+                    </constraints>
+                    <fontDescription key="fontDescription" type="system" pointSize="16"/>
+                    <color key="textColor" red="0.69019607843137254" green="0.69411764705882351" blue="0.70588235294117641" alpha="1" colorSpace="calibratedRGB"/>
+                    <nil key="highlightedColor"/>
+                </label>
+                <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="yzN-aq-oyI" customClass="LockView">
+                    <rect key="frame" x="65" y="150" width="320" height="320"/>
+                    <color key="backgroundColor" white="0.66666666666666663" alpha="1" colorSpace="calibratedWhite"/>
+                </view>
+                <label opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" minimumFontSize="10" translatesAutoresizingMaskIntoConstraints="NO" id="YIr-Ar-fRW">
+                    <rect key="frame" x="65" y="119" width="320" height="20"/>
+                    <constraints>
+                        <constraint firstAttribute="height" constant="20" id="kY3-Tf-dgY"/>
+                    </constraints>
+                    <inset key="insetFor6xAndEarlier" minX="0.0" minY="20" maxX="0.0" maxY="-20"/>
+                    <fontDescription key="fontDescription" type="system" pointSize="14"/>
+                    <color key="textColor" red="1" green="0.0" blue="0.0" alpha="1" colorSpace="calibratedRGB"/>
+                    <nil key="highlightedColor"/>
+                </label>
+            </subviews>
+            <color key="backgroundColor" red="0.93725490196078431" green="0.94901960784313721" blue="0.96862745098039216" alpha="1" colorSpace="calibratedRGB"/>
+            <constraints>
+                <constraint firstItem="P9f-a5-cuV" firstAttribute="centerX" secondItem="OsJ-Ss-8at" secondAttribute="centerX" id="1f0-1z-PxL"/>
+                <constraint firstItem="yzN-aq-oyI" firstAttribute="top" secondItem="YIr-Ar-fRW" secondAttribute="bottom" constant="11" id="9tA-wl-JRJ"/>
+                <constraint firstItem="OsJ-Ss-8at" firstAttribute="top" secondItem="iN0-l3-epB" secondAttribute="top" id="DIF-ej-5CE"/>
+                <constraint firstAttribute="bottom" secondItem="yzN-aq-oyI" secondAttribute="bottom" constant="30" id="GnW-u7-5a1"/>
+                <constraint firstItem="YIr-Ar-fRW" firstAttribute="trailing" secondItem="yzN-aq-oyI" secondAttribute="trailing" id="V7y-hu-UyT"/>
+                <constraint firstAttribute="trailing" secondItem="OsJ-Ss-8at" secondAttribute="trailing" id="Wco-jy-UxV"/>
+                <constraint firstItem="P9f-a5-cuV" firstAttribute="top" secondItem="OsJ-Ss-8at" secondAttribute="bottom" constant="40" id="WeB-ZI-YFh"/>
+                <constraint firstItem="P9f-a5-cuV" firstAttribute="top" secondItem="iN0-l3-epB" secondAttribute="top" constant="90" id="cdu-MN-vbp"/>
+                <constraint firstItem="P9f-a5-cuV" firstAttribute="centerX" secondItem="YIr-Ar-fRW" secondAttribute="centerX" id="iLH-cT-ILh"/>
+                <constraint firstItem="YIr-Ar-fRW" firstAttribute="leading" secondItem="yzN-aq-oyI" secondAttribute="leading" id="k6I-Un-3K5"/>
+                <constraint firstItem="YIr-Ar-fRW" firstAttribute="leading" secondItem="iN0-l3-epB" secondAttribute="leading" constant="65" id="kvI-K6-G2h"/>
+                <constraint firstItem="YIr-Ar-fRW" firstAttribute="top" secondItem="P9f-a5-cuV" secondAttribute="bottom" constant="9" id="mF0-si-J8o"/>
+                <constraint firstItem="OsJ-Ss-8at" firstAttribute="leading" secondItem="iN0-l3-epB" secondAttribute="leading" id="yDd-g4-WMa"/>
+            </constraints>
+            <freeformSimulatedSizeMetrics key="simulatedDestinationMetrics"/>
+            <connections>
+                <outlet property="LockView" destination="yzN-aq-oyI" id="Hnn-iw-8jX"/>
+                <outlet property="tipLabel" destination="YIr-Ar-fRW" id="Efo-VA-INZ"/>
+                <outlet property="titleLabel" destination="P9f-a5-cuV" id="1mX-tO-9ce"/>
+            </connections>
+            <point key="canvasLocation" x="344" y="270"/>
+        </view>
+    </objects>
+    <resources>
+        <image name="btn_popback" width="16" height="16"/>
+    </resources>
+</document>

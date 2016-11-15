@@ -1,0 +1,452 @@
+//
+//  CustBasicView.m
+//  Lobby
+//
+//  Created by cibdev-macmini-1 on 16/3/23.
+//  Copyright © 2016年 swy. All rights reserved.
+//
+
+#import "CustBasicView.h"
+#import "ProtentialRateView.h"
+#import "Basic.h"
+#import "Commemoration.h"
+
+@interface CustBasicView ()
+{
+    CGFloat height;
+    
+    NSArray *_keyValArr;
+}
+@property (weak, nonatomic) IBOutlet UIImageView *custIconView;
+@property (weak, nonatomic) IBOutlet UIView *basicView;
+@property (weak, nonatomic) IBOutlet UIImageView *genderView;
+@property (weak, nonatomic) IBOutlet UILabel *customerNameLb;
+@property (weak, nonatomic) IBOutlet UILabel *birthLb;
+@property (weak, nonatomic) IBOutlet UILabel *phoneLb;
+@property (weak, nonatomic) IBOutlet UIButton *nominalLevelBtn;
+@property (weak, nonatomic) IBOutlet UIButton *factLevelBtn;
+@property (weak, nonatomic) IBOutlet UILabel *sortNoLb;
+@property (weak, nonatomic) IBOutlet UILabel *branchLb;
+@property (weak, nonatomic) IBOutlet UILabel *managerLb;
+@property (weak, nonatomic) IBOutlet UILabel *openAccDurLb;
+@property (weak, nonatomic) IBOutlet UILabel *finacialLb;
+@property (weak, nonatomic) IBOutlet UILabel *gapLb;
+@property (weak, nonatomic) IBOutlet UILabel *topLb;
+
+//纪念日
+@property (weak, nonatomic) IBOutlet UIView *commemorateView;
+
+//偏好
+@property (weak, nonatomic) IBOutlet UIView *preferView;
+@property (weak, nonatomic) IBOutlet UILabel *invostPrefer;
+@property (weak, nonatomic) IBOutlet UILabel *expensePrefer;
+@property (weak, nonatomic) IBOutlet UILabel *dealWayPrefer;
+@property (weak, nonatomic) IBOutlet UILabel *durationPrefer;
+
+//潜在客户和子控件
+@property (weak, nonatomic) IBOutlet UIView *protentialView;
+@property (weak, nonatomic) IBOutlet UILabel *isProtential;
+@property (weak, nonatomic) IBOutlet UILabel *protentialVal;//潜在客户成长值 --高成长
+@property (strong, nonatomic) ProtentialRateView *contribute;//贡献度
+@property (strong, nonatomic) ProtentialRateView *loyal;//忠诚度
+@property (strong, nonatomic) ProtentialRateView *livly;//活跃度
+
+//风险评估
+@property (weak, nonatomic) IBOutlet UIView *riskView;
+@property (weak, nonatomic) IBOutlet UILabel *financeRisk;
+@property (weak, nonatomic) IBOutlet UILabel *fundRisk;
+@property (weak, nonatomic) IBOutlet UILabel *insuranceRisk;
+@property (weak, nonatomic) IBOutlet UILabel *financeTime;
+@property (weak, nonatomic) IBOutlet UILabel *fundTime;
+@property (weak, nonatomic) IBOutlet UILabel *insuranceTime;
+
+@end
+
+@implementation CustBasicView
+
+- (void)awakeFromNib
+{
+    [super awakeFromNib];
+    
+    _custIconView.layer.cornerRadius = 37.5;
+    _custIconView.clipsToBounds = YES;
+    _custIconView.layer.borderColor = [[UIColor whiteColor] CGColor];
+    _custIconView.layer.borderWidth = 2;
+    
+    _basicView.layer.cornerRadius = 4;
+    _basicView.layer.borderColor = [RGB(204, 204, 204, 1.0) CGColor];
+    _basicView.layer.borderWidth = 1;
+    _basicView.clipsToBounds = YES;
+    
+    _commemorateView.layer.cornerRadius = 5;
+    _commemorateView.layer.borderColor = [RGB(204, 204, 204, 1.0) CGColor];
+    _commemorateView.layer.borderWidth = 1;
+    _commemorateView.clipsToBounds = YES;
+    
+    _preferView.layer.cornerRadius = 5;
+    _preferView.layer.borderColor = [RGB(204, 204, 204, 1.0) CGColor];
+    _preferView.layer.borderWidth = 1;
+    _preferView.clipsToBounds = YES;
+    
+    _protentialView.layer.cornerRadius = 5;
+    _protentialView.layer.borderColor = [RGB(204, 204, 204, 1.0) CGColor];
+    _protentialView.layer.borderWidth = 1;
+    _protentialView.clipsToBounds = YES;
+    
+    _riskView.layer.cornerRadius = 5;
+    _riskView.layer.borderColor = [RGB(204, 204, 204, 1.0) CGColor];
+    _riskView.layer.borderWidth = 1;
+    _riskView.clipsToBounds = YES;
+    
+    [_protentialView addSubview:self.contribute];
+    [_protentialView addSubview:self.loyal];
+    [_protentialView addSubview:self.livly];
+    
+    [self setupKeyValue];
+    
+}
+
+- (void)setCustIconImage:(UIImage *)custIconImage
+{
+    _custIconImage = custIconImage;
+    
+    _custIconView.image = _custIconImage;
+}
+
+- (void)setupKeyValue
+{
+    _keyValArr = @[@{@"01":@"高贡献客户", @"02":@"中高贡献客户", @"03":@"空值"},
+                   @{@"01":@"零资产客户", @"02":@"低忠诚", @"03":@"中等忠诚", @"04":@"高忠诚"},
+                   @{@"01":@"睡眠", @"02":@"低活跃", @"03":@"中等活跃", @"04":@"高度活跃", @"05":@"空值"}];
+    //从本地获取客户层级
+    NSString *homePath = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES)[0];
+    NSString *filePath = [homePath stringByAppendingPathComponent:@"keyvalue.plist"];
+    NSDictionary *rootDic = [NSDictionary dictionaryWithContentsOfFile:filePath];
+    NSMutableArray *localKeyVal = [NSMutableArray array];
+    NSMutableDictionary *huoyueDic = [NSMutableDictionary dictionary];
+    NSMutableDictionary *zongchengDic = [NSMutableDictionary dictionary];
+    NSDictionary *gongxianDic = @{@"01":@"高贡献客户", @"02":@"中高贡献客户", @"03":@"空值"};
+    if (rootDic) {
+        NSArray *branches = rootDic[@"Root"];
+        for (NSDictionary *item in branches) {
+            if ([@"HYDXF" isEqualToString:item[@"codeType"]]) {
+                NSString *val = item[@"codeValue"];
+                NSString *key = item[@"codeId"];
+                [huoyueDic addEntriesFromDictionary:@{key:val}];
+            } else if ([@"ZCDXF" isEqualToString:item[@"codeType"]]) {
+                NSString *val = item[@"codeValue"];
+                NSString *key = item[@"codeId"];
+                [zongchengDic addEntriesFromDictionary:@{key:val}];
+            }
+        }
+        
+        [localKeyVal addObject:gongxianDic];
+        [localKeyVal addObject:zongchengDic];
+        [localKeyVal addObject:huoyueDic];
+        
+        _keyValArr = localKeyVal;
+    }
+}
+
+//设置客户基本信息
+- (void)setBasicInfo:(Basic *)basicInfo
+{
+    _basicInfo = basicInfo;
+    
+    if ([basicInfo.gender isEqualToString:@"M"]) {
+        _genderView.image = [UIImage imageNamed:@"man"];
+    } else if ([basicInfo.gender isEqualToString:@"F"]) {
+        _genderView.image = [UIImage imageNamed:@"woman"];
+    } else {
+        _genderView.image = [UIImage imageNamed:@"woman"];
+    }
+    _customerNameLb.text = basicInfo.customerName;
+    _birthLb.text = basicInfo.birthday;
+    _phoneLb.text = basicInfo.phone;
+    NSDictionary *keyValueDic = @{@"00":@"普通客户", @"95":@"钻石", @"96":@"非VIP核心客户", @"97":@"黄金", @"98":@"白金", @"99":@"黑金"};
+    //从本地获取客户层级
+    NSString *homePath = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES)[0];
+    NSString *filePath = [homePath stringByAppendingPathComponent:@"keyvalue.plist"];
+    NSDictionary *rootDic = [NSDictionary dictionaryWithContentsOfFile:filePath];
+    if (rootDic) {
+        NSArray *branches = rootDic[@"Root"];
+        NSMutableDictionary *tempDic = [NSMutableDictionary dictionary];
+        for (NSDictionary *item in branches) {
+            if ([@"KHCJ" isEqualToString:item[@"codeType"]]) {
+                NSString *val = item[@"codeValue"];
+                NSString *key = item[@"codeId"];
+                [tempDic addEntriesFromDictionary:@{key:val}];
+            }
+        }
+        keyValueDic = tempDic;
+    }
+    
+    NSString *nominal = [keyValueDic valueForKey:basicInfo.nominalLevel];
+    if ([nominal rangeOfString:@"普通"].location != NSNotFound) {
+        [_nominalLevelBtn setImage:[UIImage imageNamed:@"v1"] forState:UIControlStateNormal];
+    } else if ([nominal rangeOfString:@"黄金"].location != NSNotFound) {
+        [_nominalLevelBtn setImage:[UIImage imageNamed:@"v10"] forState:UIControlStateNormal];
+    } else if ([nominal rangeOfString:@"钻石"].location != NSNotFound) {
+        [_nominalLevelBtn setImage:[UIImage imageNamed:@"v3"] forState:UIControlStateNormal];
+    } else if ([nominal rangeOfString:@"白金"].location != NSNotFound) {
+        [_nominalLevelBtn setImage:[UIImage imageNamed:@"v4"] forState:UIControlStateNormal];
+    } else if ([nominal rangeOfString:@"黑金"].location != NSNotFound) {
+        [_nominalLevelBtn setImage:[UIImage imageNamed:@"v9"] forState:UIControlStateNormal];
+    } else if ([nominal rangeOfString:@"非VIP核心"].location != NSNotFound) {
+        [_nominalLevelBtn setImage:[UIImage imageNamed:@"v11"] forState:UIControlStateNormal];
+    }
+    [_nominalLevelBtn setTitle:nominal forState:UIControlStateNormal];
+    
+    NSString *factLevel = [keyValueDic valueForKey:basicInfo.nominalLevel];
+    if ([factLevel rangeOfString:@"普通"].location != NSNotFound) {
+        [_factLevelBtn setImage:[UIImage imageNamed:@"v1"] forState:UIControlStateNormal];
+    } else if ([factLevel rangeOfString:@"黄金"].location != NSNotFound) {
+        [_factLevelBtn setImage:[UIImage imageNamed:@"v10"] forState:UIControlStateNormal];
+    } else if ([factLevel rangeOfString:@"钻石"].location != NSNotFound) {
+        [_factLevelBtn setImage:[UIImage imageNamed:@"v3"] forState:UIControlStateNormal];
+    } else if ([factLevel rangeOfString:@"白金"].location != NSNotFound) {
+        [_factLevelBtn setImage:[UIImage imageNamed:@"v4"] forState:UIControlStateNormal];
+    } else if ([factLevel rangeOfString:@"黑金"].location != NSNotFound) {
+        [_factLevelBtn setImage:[UIImage imageNamed:@"v9"] forState:UIControlStateNormal];
+    } else if ([factLevel rangeOfString:@"非VIP核心"].location != NSNotFound) {
+        [_factLevelBtn setImage:[UIImage imageNamed:@"v11"] forState:UIControlStateNormal];
+    }
+    [_factLevelBtn setTitle:factLevel forState:UIControlStateNormal];
+    
+    _sortNoLb.text = basicInfo.queueNum;
+    _managerLb.text = basicInfo.manager;
+    NSString *branch = basicInfo.atBranch;
+    NSRange r = [branch rangeOfString:@"兴业银行"];
+    if (r.location != NSNotFound && r.location == 0) {
+        NSString *temp = [branch substringFromIndex:r.length];
+        branch = temp;
+    }
+    _branchLb.text = branch;
+    
+    NSDate *date = [NSDate date];
+    NSDateFormatter *matter = [[NSDateFormatter alloc] init];
+    [matter setDateFormat:@"yyyy-MM-dd"];
+    NSString *timeStr = [matter stringFromDate:date];
+    NSString *nowYear = [timeStr substringWithRange:NSMakeRange(0, 4)];
+    NSString *openYearStr = [basicInfo.openAccountDate substringWithRange:NSMakeRange(0, 4)];
+    _openAccDurLb.text = [NSString stringWithFormat:@"%d年", [nowYear intValue] - [openYearStr intValue]];
+    NSRange range = [basicInfo.openAccountDate rangeOfString:@"1899"];
+    if ([nowYear isEqualToString:openYearStr]) {
+        _openAccDurLb.text = @"今年开户";
+    } else if (range.location != NSNotFound) {
+        _openAccDurLb.text = @"5年以上";
+    }
+    _finacialLb.text = (basicInfo.financial == nil || [basicInfo.financial isEqualToString:@""]) ? @"未知" : basicInfo.financial;
+    _gapLb.text = (basicInfo.custGap == nil || [basicInfo.custGap isEqualToString:@""]) ? @"未知" : basicInfo.custGap;
+    _topLb.text = (basicInfo.topFinancialPoint == nil || [basicInfo.topFinancialPoint isEqualToString:@""]) ? @"未知" : basicInfo.topFinancialPoint;
+}
+
+//设置纪念日
+- (void)setCommomes:(NSArray *)commomes
+{
+    if (commomes == nil) {
+        return;
+    }
+    _commomes = commomes;
+    
+    if (commomes.count == 0) {
+        UILabel *warn = [[UILabel alloc] init];
+        warn.frame = CGRectMake(60, 78, self.commemorateView.frame.size.width - 80, self.frame.size.height);
+        warn.backgroundColor = [UIColor clearColor];
+        warn.textColor = RGB(68, 64, 73, 1.0);
+        warn.font = K_FONT_13;
+        warn.text = @"暂无纪念日信息";
+        [self.commemorateView addSubview:warn];
+    }
+    
+    int i = 0;
+    height = 78;
+    CGFloat startx = 38;
+    for (Commemoration *item in commomes) {
+        
+        if (i >= 4) {//只允许最多显示四条
+            break;
+        }
+        
+        if (commomes.count == 1) {
+            UIView *point = [[UIView alloc] initWithFrame:CGRectMake(startx, 78, 4, 4)];
+            point.backgroundColor = UIColorFromRGB(0x90d0f9);
+            point.layer.cornerRadius = 2;
+            point.clipsToBounds = YES;
+            [self.commemorateView addSubview:point];
+            
+            UILabel *commemorationLb = [[UILabel alloc] init];
+            commemorationLb.frame = CGRectMake(startx + 22, 72, 90, 16);
+            commemorationLb.backgroundColor = [UIColor clearColor];
+            commemorationLb.textColor = UIColorFromRGB(0x24344e);
+            commemorationLb.font = K_FONT_13;
+            commemorationLb.text = item.commemorationDate;
+            [self.commemorateView addSubview:commemorationLb];
+            
+            UILabel *commemorationDesLb = [[UILabel alloc] init];
+            commemorationDesLb.frame = CGRectMake(CGRectGetMaxX(commemorationLb.frame) + 10, 72, 120, 16);
+            commemorationDesLb.backgroundColor = [UIColor clearColor];
+            commemorationDesLb.textColor = UIColorFromRGB(0x5a5a5a);
+            commemorationDesLb.font = K_FONT_13;
+            commemorationDesLb.text = item.commemorationDes;
+            [self.commemorateView addSubview:commemorationDesLb];
+        } else {
+            
+            UIView *point = [[UIView alloc] initWithFrame:CGRectMake(startx, height, 4, 4)];
+            point.backgroundColor = UIColorFromRGB(0x90d0f9);
+            point.layer.cornerRadius = 2;
+            point.clipsToBounds = YES;
+            [self.commemorateView addSubview:point];
+            
+            if (i >= 0 && i < 3) {
+                UIView *line = [[UIView alloc] initWithFrame:CGRectMake(startx + 1.5, CGRectGetMaxY(point.frame) + 2, 1, 28)];
+                line.backgroundColor = UIColorFromRGB(0x90d0f9);
+                [self.commemorateView addSubview:line];
+            }
+            
+            UILabel *commemorationLb = [[UILabel alloc] init];
+            commemorationLb.frame = CGRectMake(startx + 22, height - 6, 90, 16);
+            commemorationLb.backgroundColor = [UIColor clearColor];
+            commemorationLb.textColor = UIColorFromRGB(0x24344e);
+            commemorationLb.font = K_FONT_13;
+            commemorationLb.text = item.commemorationDate;
+            [self.commemorateView addSubview:commemorationLb];
+            
+            UILabel *commemorationDesLb = [[UILabel alloc] init];
+            commemorationDesLb.frame = CGRectMake(CGRectGetMaxX(commemorationLb.frame) + 10, height - 6, 120, 16);
+            commemorationDesLb.backgroundColor = [UIColor clearColor];
+            commemorationDesLb.textColor = UIColorFromRGB(0x5a5a5a);
+            commemorationDesLb.font = K_FONT_13;
+            commemorationDesLb.text = item.commemorationDes;
+            [self.commemorateView addSubview:commemorationDesLb];
+            
+            height += 36;
+            
+            i++;
+        }
+    }
+}
+
+- (void)setPrefers:(NSArray *)prefers
+{
+    if (prefers == nil || prefers.count != 4) {
+        return;
+    }
+    _prefers = prefers;
+    
+    _invostPrefer.text = (!prefers[0] || [prefers[0] isEqualToString:@""]) ? @"未知" : prefers[0];
+    _expensePrefer.text = (!prefers[1] || [prefers[1] isEqualToString:@""]) ? @"未知" : prefers[1];
+    _dealWayPrefer.text = (!prefers[2] || [prefers[2] isEqualToString:@""]) ? @"未知" : prefers[2];
+    _durationPrefer.text = (!prefers[3] || [prefers[3] isEqualToString:@""]) ? @"未知" : prefers[3];
+}
+
+- (void)setRiskTypes:(NSArray *)riskTypes
+{
+    if (riskTypes == nil || riskTypes.count != 3) {
+        return;
+    }
+    _riskTypes = riskTypes;
+    
+    NSDictionary *dic = riskTypes[0];
+    NSString *finance = [dic allKeys][0];
+    NSString *financeTimeVal = [dic valueForKey:finance];
+    _financeRisk.text = finance;
+    _financeTime.text = (financeTimeVal && ![financeTimeVal isEqualToString:@""]) ? financeTimeVal : @"未知";
+    
+    NSDictionary *dic2 = riskTypes[1];
+    NSString *fundRisk = [dic2 allKeys][0];
+    NSString *fundRiskTime = [dic2 valueForKey:fundRisk];
+    _fundRisk.text = fundRisk;
+    _fundTime.text = (fundRiskTime && ![fundRiskTime isEqualToString:@""]) ? fundRiskTime : @"未知";
+    
+    NSDictionary *dic3 = riskTypes[2];
+    NSString *insurance = [dic3 allKeys][0];
+    NSString *insuranceTime = [dic3 valueForKey:insurance];
+    _insuranceRisk.text = insurance;
+    _insuranceTime.text = (insuranceTime && ![insuranceTime isEqualToString:@""]) ? insuranceTime : @"未知";
+}
+
+- (void)setRates:(NSArray *)rates
+{
+    if (rates == nil || rates.count == 0) {
+        return;
+    }
+    
+    _rates = rates;
+    
+    //贡献度
+    NSString *gongxiandu = rates[0];
+    NSString *gongxianVal = [_keyValArr[0] objectForKey:gongxiandu];
+    self.contribute.name = gongxianVal;
+    if ([gongxiandu isEqualToString:@"03"]) {
+        self.contribute.rate = 0;
+    } else if ([gongxiandu isEqualToString:@"02"]) {
+        self.contribute.rate = 0.5;
+    } else if ([gongxiandu isEqualToString:@"01"]) {
+        self.contribute.rate = 1.0;
+    }
+    //忠诚度
+    NSString *loyal = rates[1];
+    NSString *loyalVal = [_keyValArr[1] objectForKey:loyal];
+    self.loyal.name = loyalVal;
+    if ([loyal isEqualToString:@"04"]) {
+        self.loyal.rate = 1.0;
+    } else if ([loyal isEqualToString:@"03"]) {
+        self.loyal.rate = 0.66;
+    } else if ([loyal isEqualToString:@"02"]) {
+        self.loyal.rate = 0.33;
+    } else if ([loyal isEqualToString:@"01"]) {
+        self.loyal.rate = 0.0;
+    }
+    //活跃度
+    NSString *livly = rates[2];
+    NSString *livlyVal = [_keyValArr[2] objectForKey:livly];
+    self.livly.name = livlyVal;
+    if ([livly isEqualToString:@"05"]) {
+        self.livly.rate = 0.0;
+    } else if ([livly isEqualToString:@"04"]) {
+        self.livly.rate = 1.0;
+    } else if ([livly isEqualToString:@"03"]) {
+        self.livly.rate = 0.75;
+    } else if ([livly isEqualToString:@"02"]) {
+        self.livly.rate = 0.5;
+    } else if ([livly isEqualToString:@"01"]) {
+        self.livly.rate = 0.25;
+    }
+    
+    NSString *isProtentialStr = rates[3];
+    _isProtential.text = [isProtentialStr isEqualToString:@"01"] ? @"潜力私行客户" : @"非潜力私行客户";
+    _protentialVal.text = [rates[4] isEqualToString:@"01"] ? @"高成长" : @"非高成长";
+}
+
+- (ProtentialRateView *)contribute
+{
+    if (_contribute == nil) {
+        _contribute = (ProtentialRateView *)[[[NSBundle mainBundle] loadNibNamed:@"ProtentialRateView" owner:nil options:nil] firstObject];
+        _contribute.frame = CGRectMake(20, 86, 293, 33);
+        _contribute.rateType = @"贡献度";
+    }
+    return _contribute;
+}
+
+- (ProtentialRateView *)loyal
+{
+    if (_loyal == nil) {
+        _loyal = (ProtentialRateView *)[[[NSBundle mainBundle] loadNibNamed:@"ProtentialRateView" owner:nil options:nil] firstObject];
+        _loyal.frame = CGRectMake(20, 134, 293, 33);
+        _loyal.rateType = @"忠诚度";
+    }
+    return _loyal;
+}
+
+- (ProtentialRateView *)livly
+{
+    if (_livly == nil) {
+        _livly = (ProtentialRateView *)[[[NSBundle mainBundle] loadNibNamed:@"ProtentialRateView" owner:nil options:nil] firstObject];
+        _livly.frame = CGRectMake(20, 181, 293, 33);
+        _livly.rateType = @"活跃度";
+    }
+    return _livly;
+}
+
+@end

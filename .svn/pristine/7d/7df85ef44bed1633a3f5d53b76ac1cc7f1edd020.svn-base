@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="9531" systemVersion="15E65" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES">
+    <dependencies>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="9529"/>
+    </dependencies>
+    <objects>
+        <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner"/>
+        <placeholder placeholderIdentifier="IBFirstResponder" id="-2" customClass="UIResponder"/>
+        <view contentMode="scaleToFill" id="iN0-l3-epB" customClass="AboutView">
+            <rect key="frame" x="0.0" y="0.0" width="450" height="617"/>
+            <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+            <subviews>
+                <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="sBf-3X-L2J">
+                    <rect key="frame" x="0.0" y="0.0" width="450" height="50"/>
+                    <subviews>
+                        <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="SCl-EB-v37">
+                            <rect key="frame" x="400" y="0.0" width="50" height="50"/>
+                            <constraints>
+                                <constraint firstAttribute="width" constant="50" id="QAs-CK-gUT"/>
+                                <constraint firstAttribute="height" constant="50" id="UeI-iD-8LB"/>
+                            </constraints>
+                            <state key="normal" image="del"/>
+                            <state key="highlighted" image="del_h"/>
+                            <connections>
+                                <action selector="close:" destination="iN0-l3-epB" eventType="touchUpInside" id="pDb-rt-kWL"/>
+                            </connections>
+                        </button>
+                        <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="关   于" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="C35-D3-A7a">
+                            <rect key="frame" x="171" y="15" width="108" height="20"/>
+                            <constraints>
+                                <constraint firstAttribute="height" constant="20" id="dDr-61-sYg"/>
+                                <constraint firstAttribute="width" constant="108" id="mbR-aJ-XQa"/>
+                            </constraints>
+                            <fontDescription key="fontDescription" type="boldSystem" pointSize="16"/>
+                            <color key="textColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+                            <nil key="highlightedColor"/>
+                        </label>
+                    </subviews>
+                    <color key="backgroundColor" red="0.0" green="0.53333333329999999" blue="0.82352941180000006" alpha="1" colorSpace="calibratedRGB"/>
+                    <constraints>
+                        <constraint firstAttribute="height" constant="50" id="9ZT-fM-B0r"/>
+                        <constraint firstItem="C35-D3-A7a" firstAttribute="centerY" secondItem="sBf-3X-L2J" secondAttribute="centerY" id="Xyd-8a-Lf3"/>
+                        <constraint firstItem="C35-D3-A7a" firstAttribute="centerX" secondItem="sBf-3X-L2J" secondAttribute="centerX" id="b7r-xw-QHX"/>
+                        <constraint firstItem="SCl-EB-v37" firstAttribute="centerY" secondItem="sBf-3X-L2J" secondAttribute="centerY" id="iMj-QQ-DF0"/>
+                        <constraint firstAttribute="trailing" secondItem="SCl-EB-v37" secondAttribute="trailing" id="ir9-SL-ZZt"/>
+                    </constraints>
+                </view>
+                <imageView userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="about_logo" translatesAutoresizingMaskIntoConstraints="NO" id="TJA-7k-kvX">
+                    <rect key="frame" x="178" y="82" width="95" height="61"/>
+                    <constraints>
+                        <constraint firstAttribute="height" constant="61" id="OlW-Ap-bCw"/>
+                        <constraint firstAttribute="width" constant="95" id="UNZ-AW-kl4"/>
+                    </constraints>
+                </imageView>
+                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="智慧厅堂" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="OFb-sj-ZnW">
+                    <rect key="frame" x="191" y="158" width="68" height="20"/>
+                    <constraints>
+                        <constraint firstAttribute="width" constant="68" id="0La-5L-Mtc"/>
+                        <constraint firstAttribute="height" constant="20" id="g9W-Kl-mlb"/>
+                    </constraints>
+                    <fontDescription key="fontDescription" type="system" pointSize="16"/>
+                    <color key="textColor" red="0.14117647058823529" green="0.20392156862745098" blue="0.30588235294117649" alpha="1" colorSpace="calibratedRGB"/>
+                    <nil key="highlightedColor"/>
+                </label>
+                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="兴业银行移动营销系统" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="ZN3-xm-gCV">
+                    <rect key="frame" x="140" y="183" width="170" height="16"/>
+                    <constraints>
+                        <constraint firstAttribute="height" constant="16" id="88a-tL-MnU"/>
+                        <constraint firstAttribute="width" constant="170" id="gg1-TO-ocJ"/>
+                    </constraints>
+                    <fontDescription key="fontDescription" type="system" pointSize="14"/>
+                    <color key="textColor" red="0.3529411764705882" green="0.3529411764705882" blue="0.3529411764705882" alpha="1" colorSpace="calibratedRGB"/>
+                    <nil key="highlightedColor"/>
+                </label>
+                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="（v1.2）" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="sTI-Sc-JXM">
+                    <rect key="frame" x="193" y="204" width="65" height="16"/>
+                    <constraints>
+                        <constraint firstAttribute="height" constant="16" id="Yrh-Nv-Xoj"/>
+                        <constraint firstAttribute="width" constant="65" id="bfS-ei-BV6"/>
+                    </constraints>
+                    <fontDescription key="fontDescription" type="system" pointSize="14"/>
+                    <color key="textColor" red="0.3529411764705882" green="0.3529411764705882" blue="0.3529411764705882" alpha="1" colorSpace="calibratedRGB"/>
+                    <nil key="highlightedColor"/>
+                </label>
+                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="智慧厅堂是为了方便厅堂管理人员及时对当前厅堂服务的情况、以及客户信息的了解，以更好服务于客户、拓展业务办理，配合厅堂智能排队与预约服务系统上线，由零售银行牵头相关部门，在移动营销系统中推出的支持网点的PAD移动应用。" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" preferredMaxLayoutWidth="250" translatesAutoresizingMaskIntoConstraints="NO" id="Vpr-6q-hVF">
+                    <rect key="frame" x="100" y="240" width="250" height="183"/>
+                    <fontDescription key="fontDescription" type="system" pointSize="14"/>
+                    <color key="textColor" red="0.28627450980392155" green="0.28627450980392155" blue="0.28627450980392155" alpha="1" colorSpace="calibratedRGB"/>
+                    <nil key="highlightedColor"/>
+                </label>
+                <imageView userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="aw5-eH-ZXd">
+                    <rect key="frame" x="175" y="442" width="100" height="100"/>
+                    <constraints>
+                        <constraint firstAttribute="width" constant="100" id="aCh-SV-NbF"/>
+                        <constraint firstAttribute="height" constant="100" id="rfj-Nr-mZ1"/>
+                    </constraints>
+                </imageView>
+                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Copyright@2015 INDUSTIRIAL BANK CO&gt;, LTD" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="NdS-qj-THI">
+                    <rect key="frame" x="95" y="572" width="261" height="12"/>
+                    <constraints>
+                        <constraint firstAttribute="width" constant="261" id="3wo-NN-Sa0"/>
+                        <constraint firstAttribute="height" constant="12" id="NJA-wv-CWm"/>
+                    </constraints>
+                    <fontDescription key="fontDescription" type="system" pointSize="11"/>
+                    <color key="textColor" red="0.65490196078431373" green="0.66666666666666663" blue="0.6705882352941176" alpha="1" colorSpace="calibratedRGB"/>
+                    <nil key="highlightedColor"/>
+                </label>
+            </subviews>
+            <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="calibratedWhite"/>
+            <constraints>
+                <constraint firstItem="ZN3-xm-gCV" firstAttribute="centerX" secondItem="iN0-l3-epB" secondAttribute="centerX" id="4fZ-9P-yTU"/>
+                <constraint firstItem="Vpr-6q-hVF" firstAttribute="leading" secondItem="iN0-l3-epB" secondAttribute="leading" constant="100" id="5Td-l9-JgX"/>
+                <constraint firstItem="sTI-Sc-JXM" firstAttribute="centerX" secondItem="iN0-l3-epB" secondAttribute="centerX" id="FFa-dB-rCt"/>
+                <constraint firstItem="Vpr-6q-hVF" firstAttribute="top" secondItem="sTI-Sc-JXM" secondAttribute="bottom" constant="20" id="Hji-aE-YZK"/>
+                <constraint firstItem="TJA-7k-kvX" firstAttribute="top" secondItem="sBf-3X-L2J" secondAttribute="bottom" constant="32" id="LGX-sb-0Uz"/>
+                <constraint firstItem="TJA-7k-kvX" firstAttribute="centerX" secondItem="iN0-l3-epB" secondAttribute="centerX" id="Nzd-A6-f0Z"/>
+                <constraint firstItem="NdS-qj-THI" firstAttribute="top" secondItem="aw5-eH-ZXd" secondAttribute="bottom" constant="30" id="Ssi-mM-gsz"/>
+                <constraint firstItem="NdS-qj-THI" firstAttribute="centerX" secondItem="iN0-l3-epB" secondAttribute="centerX" id="Un3-QQ-4SF"/>
+                <constraint firstAttribute="bottom" secondItem="NdS-qj-THI" secondAttribute="bottom" constant="33" id="VUk-Xa-u6f"/>
+                <constraint firstItem="sBf-3X-L2J" firstAttribute="top" secondItem="iN0-l3-epB" secondAttribute="top" id="ajb-MP-Kvj"/>
+                <constraint firstAttribute="trailing" secondItem="sBf-3X-L2J" secondAttribute="trailing" id="fbr-ki-Gus"/>
+                <constraint firstItem="ZN3-xm-gCV" firstAttribute="top" secondItem="OFb-sj-ZnW" secondAttribute="bottom" constant="5" id="g4L-mD-ZTW"/>
+                <constraint firstAttribute="trailing" secondItem="Vpr-6q-hVF" secondAttribute="trailing" constant="100" id="kVY-cO-1RC"/>
+                <constraint firstItem="sTI-Sc-JXM" firstAttribute="top" secondItem="ZN3-xm-gCV" secondAttribute="bottom" constant="5" id="p67-bc-Pxa"/>
+                <constraint firstItem="aw5-eH-ZXd" firstAttribute="top" secondItem="Vpr-6q-hVF" secondAttribute="bottom" constant="19" id="sGr-sr-Td5"/>
+                <constraint firstItem="sBf-3X-L2J" firstAttribute="leading" secondItem="iN0-l3-epB" secondAttribute="leading" id="uUi-lU-Az9"/>
+                <constraint firstItem="OFb-sj-ZnW" firstAttribute="top" secondItem="TJA-7k-kvX" secondAttribute="bottom" constant="15" id="vBK-Ka-ixp"/>
+                <constraint firstItem="OFb-sj-ZnW" firstAttribute="centerX" secondItem="iN0-l3-epB" secondAttribute="centerX" id="xX9-Tj-4ME"/>
+                <constraint firstItem="aw5-eH-ZXd" firstAttribute="centerX" secondItem="iN0-l3-epB" secondAttribute="centerX" id="zii-Ka-Mil"/>
+            </constraints>
+            <freeformSimulatedSizeMetrics key="simulatedDestinationMetrics"/>
+            <connections>
+                <outlet property="descible" destination="Vpr-6q-hVF" id="72n-vg-GBx"/>
+            </connections>
+            <point key="canvasLocation" x="269" y="264.5"/>
+        </view>
+    </objects>
+    <resources>
+        <image name="about_logo" width="95" height="60"/>
+        <image name="del" width="24" height="24"/>
+        <image name="del_h" width="24" height="24"/>
+    </resources>
+</document>

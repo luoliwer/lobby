@@ -1,0 +1,224 @@
+//
+//  DateHomeController.m
+//  Lobby
+//
+//  Created by cibdev-macmini-1 on 16/10/10.
+//  Copyright © 2016年 swy. All rights reserved.
+//
+
+#import "DateHomeController.h"
+#import "FDCalendar.h"
+
+@interface DateHomeController ()<FDCalendarDelegate,UIGestureRecognizerDelegate>
+{
+    FDCalendar* startCalendar;
+    FDCalendar* endCalendar;
+    
+    NSString *beginDate; //开始时间
+    NSString *endDate; //结束时间
+}
+@property (weak, nonatomic) IBOutlet UILabel *leftDateLabel;
+@property (weak, nonatomic) IBOutlet UILabel *rightDateLabel;
+@property (weak, nonatomic) IBOutlet UILabel *leftWeekLabel;
+@property (weak, nonatomic) IBOutlet UILabel *rightWeekLabel;
+
+@property (weak, nonatomic) IBOutlet UIView *toolView;
+@end
+
+@implementation DateHomeController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    
+    //初始化时间
+    NSDate *date = [NSDate date];
+    NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+    [dateFormatter setDateFormat:@"yyyy-MM-dd"];
+    endDate = [dateFormatter stringFromDate:date];
+    NSDate *begindate = [NSDate dateWithTimeIntervalSince1970:[date timeIntervalSince1970]];
+    beginDate = [dateFormatter stringFromDate:begindate];
+    self.leftDateLabel.text = beginDate;
+    self.rightDateLabel.text = endDate;
+    //初始化星期
+    self.rightWeekLabel.text =  [FDCalendar getWeekday:date];
+    self.leftWeekLabel.text = [FDCalendar getWeekday:[NSDate dateWithTimeIntervalSince1970:[date timeIntervalSince1970]]];
+    
+    //添加手势处理
+    UITapGestureRecognizer *recognizer = [[UITapGestureRecognizer alloc] initWithTarget:nil action:nil];
+    recognizer.delegate = self;
+    [self.view addGestureRecognizer:recognizer];
+}
+
+#pragma mark -- 日期选择事件
+- (IBAction)startDateAction:(id)sender
+{
+    if(!startCalendar){
+        startCalendar = [[FDCalendar alloc] initWithCurrentDate:[NSDate dateWithTimeIntervalSince1970:[[NSDate date] timeIntervalSince1970] ]];
+        startCalendar.delegate=self;
+        [startCalendar showCalendarWithClickControl:sender inView:self.view];
+    }else{
+        startCalendar.hidden=NO;
+    }
+}
+
+- (IBAction)endDateAction:(id)sender
+{
+    if(!endCalendar){
+        endCalendar = [[FDCalendar alloc] initWithCurrentDate:[NSDate date]];
+        endCalendar.delegate=self;
+        [endCalendar showCalendarWithClickControl:sender inView:self.view];
+    }else{
+        endCalendar.hidden=NO;
+    }
+}
+
+
+#pragma mark --FDCalendarDelegate
+- (void)refreshWithData:(NSString *)date weekDay:(NSString *)weekDay{
+    if(startCalendar && startCalendar.hidden==NO){
+        //验证日期大小
+        int compareResult = [FDCalendar compareWithDate:date anthorDate:self.rightDateLabel.text];
+        if(compareResult == 1){
+            [self showAlert];
+            return;
+        }
+        self.leftDateLabel.text=date;
+        self.leftWeekLabel.text=weekDay;
+        [self performSelector:@selector(hideCalendar:) withObject:startCalendar afterDelay:0.2];
+    }else if(endCalendar && endCalendar.hidden==NO){
+        //验证日期大小
+        int compareResult = [FDCalendar compareWithDate:date anthorDate:self.leftDateLabel.text];
+        if(compareResult == -1){
+            [self showAlert];
+            return;
+        }
+        NSDate *todayDate = [NSDate date];
+        NSDateFormatter *newmatter = [[NSDateFormatter alloc] init];
+        [newmatter setDateFormat:@"yyyy-MM-dd"];
+        NSString *dateStr = [newmatter stringFromDate:todayDate];
+        int compareResult1 = [FDCalendar compareWithDate:date anthorDate:dateStr];
+        if (compareResult1 == 1) {
+            UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"警告" message:@"截止日期不能大于今天日期" delegate:self cancelButtonTitle:@"确定" otherButtonTitles: nil];
+            [alert show];
+            return;
+        }
+        self.rightDateLabel.text=date;
+        self.rightWeekLabel.text=weekDay;
+        [self performSelector:@selector(hideCalendar:) withObject:endCalendar afterDelay:0.2];
+    }
+}
+-(void) hideCalendar:(FDCalendar*) calendar{
+    calendar.hidden=YES;
+}
+-(void) showAlert{
+    UIAlertView* alert =[[UIAlertView alloc]initWithTitle:@"警告" message:@"开始日期不能大于结束日期" delegate:nil cancelButtonTitle:@"确定" otherButtonTitles:nil, nil];
+    [alert show];
+}
+
+#pragma mark - Handling Touches
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldReceiveTouch:(UITouch *)touch {
+    BOOL isExist = NO;
+    if(startCalendar && startCalendar.hidden==NO){
+        CGPoint p = [touch locationInView:self.view];
+        CGRect rect = [startCalendar.superview convertRect:startCalendar.frame toView:self.view];
+        if(CGRectContainsPoint(rect, p)){
+            return NO;
+        }
+        isExist=YES;
+    }
+    
+    if(endCalendar && endCalendar.hidden==NO){
+        CGPoint p1 = [touch locationInView:self.view];
+        CGRect rect1 = [endCalendar.superview convertRect:endCalendar.frame toView:self.view];
+        if(CGRectContainsPoint(rect1, p1)){
+            return NO;
+        }
+        isExist=YES;
+    }
+    if(isExist){
+        if(startCalendar){
+            startCalendar.hidden=YES;
+        }
+        if(endCalendar){
+            endCalendar.hidden=YES;
+        }
+        return YES;
+    }
+    return NO;
+}
+// 将yyyyMMdd格式的日期转化成yyyy-MM-dd格式的日期
+- (NSString *)dateFormatterTransfer:(NSString *)dateString{
+    
+    NSDateFormatter *formatter=[[NSDateFormatter alloc] init];
+    [formatter setDateFormat:@"yyyyMMdd"];
+    NSDate *date = [formatter dateFromString:dateString];
+    NSDateFormatter *newmatter = [[NSDateFormatter alloc] init];
+    [newmatter setDateFormat:@"yyyy-MM-dd"];
+    NSString *dateStr = [newmatter stringFromDate:date];
+    return dateStr;
+    
+}
+// 将yyyy-MM-dd格式的日期转化成yyyyMMdd格式的日期
+- (NSString *)dateTransfer:(NSString *)dateStr{
+    
+    NSDateFormatter *formatter=[[NSDateFormatter alloc] init];
+    [formatter setDateFormat:@"yyyy-MM-dd"];
+    NSDate *date = [formatter dateFromString:dateStr];
+    NSDateFormatter *newmatter = [[NSDateFormatter alloc] init];
+    [newmatter setDateFormat:@"yyyyMMdd"];
+    NSString *dateString = [newmatter stringFromDate:date];
+    return dateString;
+    
+}
+
+//- (void)initData{
+//    beginDate = [self dateTransfer:self.leftDateLabel.text];
+//    endDate = [self dateTransfer:self.rightDateLabel.text];
+//    if ([self.stateLabel.text isEqualToString:@"全部"]) {
+//        currentpage = 1;
+//        process_Status = @"";
+//        if (!_showLoading) {
+//            [self startAnimateInView:self.view];
+//            _showLoading = YES;
+//        }
+//        commentCustomerArr = nil;
+//        commentCustomerArr = [[NSMutableArray alloc] init];
+//        [self invokeCommentData];
+//    }else if ([self.stateLabel.text isEqualToString:@"未处理"]){
+//        currentpage = 1;
+//        process_Status = @"1";
+//        if (!_showLoading) {
+//            [self startAnimateInView:self.view];
+//            _showLoading = YES;
+//        }
+//        commentCustomerArr = nil;
+//        commentCustomerArr = [[NSMutableArray alloc] init];
+//        [self invokeCommentData];
+//    }else if ([self.stateLabel.text isEqualToString:@"已处理"]){
+//        currentpage = 1;
+//        process_Status = @"2";
+//        if (!_showLoading) {
+//            [self startAnimateInView:self.view];
+//            _showLoading = YES;
+//        }
+//        commentCustomerArr = nil;
+//        commentCustomerArr = [[NSMutableArray alloc] init];
+//        [self invokeCommentData];
+//    }else if ([self.stateLabel.text isEqualToString:@"处理中"]){
+//        currentpage = 1;
+//        process_Status = @"3";
+//        if (!_showLoading) {
+//            [self startAnimateInView:self.view];
+//            _showLoading = YES;
+//        }
+//        commentCustomerArr = nil;
+//        commentCustomerArr = [[NSMutableArray alloc] init];
+//        [self invokeCommentData];
+//    }
+//}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+}
+
+@end

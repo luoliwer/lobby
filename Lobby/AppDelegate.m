@@ -1,0 +1,348 @@
+//
+//  AppDelegate.m
+//  SmartHall
+//
+//  Created by YangChao on 13/1/16.
+//  Copyright © 2016年 swy. All rights reserved.
+//
+
+#import "AppDelegate.h"
+#import "LoginViewController.h"
+#import <CIBBaseSDK/CIBBaseSDK.h>
+#import "ComplianceChecks.h"
+#import "PushManager.h"
+
+@interface AppDelegate ()<UIAlertViewDelegate, PushManagerDelegate, DeviceTokenDelegate>
+{
+    NSDate *enterBackgroundTime;  // 进入后台时间
+    int lockInterval;  // 进入后台 -> 进入前台 需要解锁的间隔，单位:s
+}
+
+@end
+
+@implementation AppDelegate
+
+- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
+    
+    [self deleteCacheFile];//清理缓存
+    
+    // 默认设置各接口地址为非Mdm环境
+    [UrlManager setMdmEnv:NO];
+    
+    // 系统默认刷新时间
+    NSUserDefaults *userdefault = [NSUserDefaults standardUserDefaults];
+    NSString * timeString = [userdefault objectForKey:@"timeInterval"];
+    if (timeString && ![timeString isEqualToString:@""]) {
+        [GlobleData sharedInstance].timeInterval = [timeString intValue];
+    }else{
+        [GlobleData sharedInstance].timeInterval = 60;
+    }
+#ifdef MDM_ENV
+    
+    [UrlManager setMdmEnv:YES];
+    
+    NSString *mdmServerUrl = @"https://220.250.30.210:8112";
+    NSString *deviceId = [DeviceInfoManager getDeviceId];
+    
+    NSMutableDictionary *infoDic = [ComplianceChecks checkPhoneComplianceWithUrl:mdmServerUrl cibID:deviceId isBackStage:NO];
+    
+    if ([[infoDic objectForKey:COMLIANCECHECKS] isEqualToString:@"0"]) {
+        NSLog(@"设备合规，正常启动");
+    }
+    else {
+        UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"提示" message:@"设备不合规，请前往应用商城查看具体违规信息。点击确定退出应用" delegate:self cancelButtonTitle:@"确定" otherButtonTitles:nil, nil];
+        alert.tag = 1001;
+        [alert show];
+        return YES;
+    }
+#endif
+    
+    _isAppActive = YES;
+    lockInterval =  [[self readInfoFromPlist] intValue];
+    self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
+    self.window.backgroundColor = [UIColor whiteColor];
+    LoginViewController *loginVC = [[LoginViewController alloc] init];
+    UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:loginVC];
+    nav.navigationBarHidden = YES;
+    self.window.rootViewController = nav;
+    
+    [self.window makeKeyAndVisible];
+    return YES;
+}
+
+- (void)deleteCacheFile
+{
+    NSString *homePath = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES)[0];
+    NSFileManager *manager = [NSFileManager defaultManager];
+    NSArray *fileList = [manager contentsOfDirectoryAtPath:homePath error:NULL];
+    if (fileList == nil) {
+        return;
+    }
+    for (NSString *file in fileList) {
+        NSRange range = [file rangeOfString:@".png"];
+        if (range.location != NSNotFound) {
+            NSString *filePath = [homePath stringByAppendingPathComponent:file];
+            [manager removeItemAtPath:filePath error:NULL];
+        }
+    }
+    
+}
+
+- (void)pushRegist
+{
+    // 由于mPush的SDK没有注册成功的回调方法，只有收到deviceToken的回调方法。因此，无法判断推送服务是否注册成功。只能采用每次程序启动时，均注册推送服务的方法。
+    NSLog(@"开始注册推送...");
+    // 注册推送服务
+    [PushManager startPushServicePushDelegate:self tokenDelegate:self];
+    [PushManager setDebugMode:YES];
+    
+    // 设置收到消息的处理Delegate
+    [PushManager setPushDelegate:self append:NO];
+}
+
+#pragma mark 推送代理
+
+#pragma mark - 向应用服务端注册推送服务
+- (void)registerPushServiceToAppServerWithDeviceToken:(NSString *)deviceToken {
+    // 如果本地密钥存在，则调用应用服务端注册接口，上报设备标识
+    BOOL isDeviceKeyExisted = [[NSUserDefaults standardUserDefaults] boolForKey:deviceToken];
+    if (isDeviceKeyExisted) {
+        NSString *pushAppId = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"MPushAppID"];
+        NSString *pushAppKey = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"MPushAppKey"];
+        NSString *appId = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleIdentifier"];
+        NSString *deviceId = [DeviceInfoManager getDeviceId];
+        NSString *notesId = [NSString stringWithFormat:@"%@", COM_INSTANCE.userid];
+        id paramDic = @{@"pushAppId":pushAppId,
+                        @"pushAppKey":pushAppKey,
+                        @"pushToken":deviceToken,
+                        @"notesId":notesId,
+                        @"appId":appId,
+                        @"sysType":@"ios",
+                        @"deviceId":deviceId};
+        [InvokeManager invokeApi:@"" withMethod:@"POST" andParameter:paramDic onSuccess:^(NSString *responseCode, NSString *responseInfo) {
+            NSDictionary *responseDic = (NSDictionary *)responseInfo;
+            NSString *resultCode = [responseDic objectForKey:@"resultCode"];
+            if ([resultCode isEqualToString:@"0"]) {
+                NSLog(@"注册服务调用成功");
+                // 此设备标识已经在应用服务端注册成功
+                [[NSUserDefaults standardUserDefaults] setBool:YES forKey:deviceToken];
+            }
+            else {
+                NSLog(@"注册服务调用失败");
+                // 此设备标识在应用服务端注册失败
+                [[NSUserDefaults standardUserDefaults] setBool:NO forKey:deviceToken];
+            }
+        } onFailure:^(NSString *responseCode, NSString *responseInfo) {
+            NSLog(@"注册服务调用失败");
+            // 此设备标识在应用服务端注册失败
+            [[NSUserDefaults standardUserDefaults] setBool:NO forKey:deviceToken];
+            if ([responseCode isEqualToString:@"11"]) {
+            }
+        }];
+    }
+}
+#pragma mark - 本地通知的处理逻辑
+
+
+
+-(void)application:(UIApplication *)application didReceiveLocalNotification:(UILocalNotification *)notification
+{
+    
+}
+
+#pragma mark - 推送相关的回调方法
+/**
+ *  接收到推送消息的回调函数
+ *
+ *  @param title     消息的标题
+ *  @param content   消息的正文
+ *  @param extention 消息的附带信息（用于标记具体的WebApp等）
+ *
+ *  @return BOOL 当返回YES时，仅处理至当前事件处，后续事件将不再执行，当返回NO时，按照事件链继续执行，直至返回YES或者所有事件执行完。
+ */
+- (BOOL)onMessage:(NSString *)title content:(NSString *)content extention:(NSDictionary *)extention {
+    NSLog(@"title : %@ \n content : %@ \n extention : %@ \n",title,content,[extention description]);
+    
+    return YES;
+}
+
+-(void)didReciveDeviceToken:(NSString *)deviceToken {
+    NSLog(@"deviceToken --- String : %@",deviceToken);
+    // 获取之前存储的设备标识
+    NSString *formerDeviceToken = [[NSUserDefaults standardUserDefaults] objectForKey:kKeyOfDeviceToken];
+    
+    // 如果从未有过设备标识，或者此次获得的设备标识与之前本次存储的不一致，则将此新的设备标识存储在本地
+    if (!formerDeviceToken || ![formerDeviceToken isEqualToString:deviceToken]) {
+        [[NSUserDefaults standardUserDefaults] setObject:deviceToken forKey:kKeyOfDeviceToken];
+        [self registerPushServiceToAppServerWithDeviceToken:deviceToken];
+    }
+    // 两次返回的设备标识一致
+    
+    else {
+        // 此设备标识在应用服务端ƒ未能注册成功
+        if (![[NSUserDefaults standardUserDefaults] boolForKey:deviceToken]) {
+            [self registerPushServiceToAppServerWithDeviceToken:deviceToken];
+        }
+    }
+}
+
+- (void)startTimer
+{
+    if (_myTimer) {//定时器启动
+        [_myTimer setFireDate:[NSDate distantPast]];
+    }
+    if (_stationTimer) {//定时器停止工作
+        [_stationTimer setFireDate:[NSDate distantPast]];
+    }
+    if (_queueTimer) {//定时器停止工作
+        [_queueTimer setFireDate:[NSDate distantPast]];
+    }
+    if (_customerTimer) {//定时器停止工作
+        [_customerTimer setFireDate:[NSDate distantPast]];
+    }
+    if (_commentTimer) {
+        [_commentTimer setFireDate:[NSDate distantPast]];
+    }
+    if (_dateTimer) {
+        [_dateTimer setFireDate:[NSDate distantPast]];
+    }
+}
+
++ (AppDelegate *)delegate {
+    return (AppDelegate *)[[UIApplication sharedApplication] delegate];
+}
+
+- (void)stopTimer
+{
+    if (_myTimer) {//定时器停止工作
+        [_myTimer setFireDate:[NSDate distantFuture]];
+    }
+    if (_stationTimer) {//定时器停止工作
+        [_stationTimer setFireDate:[NSDate distantFuture]];
+    }
+    if (_queueTimer) {//定时器停止工作
+        [_queueTimer setFireDate:[NSDate distantFuture]];
+    }
+    if (_customerTimer) {//定时器停止工作
+        [_customerTimer setFireDate:[NSDate distantFuture]];
+    }
+    if (_commentTimer) {
+        [_commentTimer setFireDate:[NSDate distantFuture]];
+    }
+    if (_dateTimer) {
+        [_dateTimer setFireDate:[NSDate distantFuture]];
+    }
+}
+
+- (void)applicationWillResignActive:(UIApplication *)application {
+    _isAppActive = NO;
+    enterBackgroundTime = [NSDate date];
+    
+    [self stopTimer];
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"backToHomeNotification" object:nil];
+}
+
+- (void)applicationDidEnterBackground:(UIApplication *)application {
+    
+    [self stopTimer];
+}
+
+- (void)applicationWillEnterForeground:(UIApplication *)application {
+    // Called as part of the transition from the background to the inactive state; here you can undo many of the changes made on entering the background.
+    [self startTimer];
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"enterFrontNotification" object:nil];
+}
+
+- (void)applicationDidBecomeActive:(UIApplication *)application {
+    if (!_isAppActive) {
+        _isAppActive = YES;
+        NSTimeInterval interval = [[NSDate date] timeIntervalSinceDate:enterBackgroundTime];
+        if (interval > lockInterval && [CommonUtils sharedInstance].noteId != nil) {
+            [self showLockViewController:LockViewTypeCheck onSucceeded:^{
+                [self.lockVc dismissViewControllerAnimated:YES completion:nil];
+                 self.lockVc = nil;
+            } onFailed:nil];
+            [self.window makeKeyAndVisible];
+        }
+    }
+}
+- (void)showLockViewController:(LockViewType)type onSucceeded:(void(^)())onSucceededBlock onFailed:(void(^)())onFailedBlock
+{
+    if (self.lockVc == nil)
+    {
+        LockViewController *controller = [[LockViewController alloc] initWithType:type];
+        self.lockVc = controller;
+
+        [self.window.rootViewController presentViewController:self.lockVc animated:YES completion:nil];
+        
+        // 验证手势成功时的操作
+        self.lockVc.succeededBlock = ^()
+        {
+            if (onSucceededBlock) {
+                onSucceededBlock();
+            }
+        };
+        
+        // 验证手势失败时的操作
+        self.lockVc.failBlock = ^()
+        {
+            [self.lockVc dismissViewControllerAnimated:YES completion:nil];
+            self.lockVc = nil;
+            if (onFailedBlock)
+            {
+                onFailedBlock();
+            }
+        };
+    }
+}
+
+
+- (void)applicationWillTerminate:(UIApplication *)application {
+    // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
+}
+//自定义提示框
+- (void)showMessage:(NSString *)message
+{
+    UIWindow * window = [UIApplication sharedApplication].keyWindow;
+    UIView *showview =  [[UIView alloc] init];
+    CGFloat w = 260;
+    CGFloat h = 50;
+    CGFloat x = (window.bounds.size.width - w) / 2;
+    CGFloat y = (window.bounds.size.height - h) / 2;
+    showview.frame = CGRectMake(x, y, w, h);
+    showview.backgroundColor = RGB(0, 0, 0, 0.7);
+    showview.layer.cornerRadius = 5.0f;
+    showview.layer.masksToBounds = YES;
+    [window addSubview:showview];
+    
+    UILabel *label = [[UILabel alloc] init];
+    label.frame = CGRectMake(0, 0, w, h);
+    label.backgroundColor = [UIColor clearColor];
+    label.textColor = [UIColor whiteColor];
+    label.textAlignment = NSTextAlignmentCenter;
+    label.numberOfLines = 0;
+    label.font = K_FONT_16;
+    label.text = message;
+    [showview addSubview:label];
+    [UIView animateWithDuration:2 animations:^{
+        showview.alpha = 0;
+    } completion:^(BOOL finished) {
+        [showview removeFromSuperview];
+    }];
+}
+// 读取plist文件的信息
+- (NSNumber *)readInfoFromPlist{
+    NSBundle *bundle = [NSBundle mainBundle];
+    NSString *path=[bundle pathForResource:@"Setting" ofType:@"plist"];
+    NSDictionary *dic = [[NSDictionary alloc] initWithContentsOfFile:path];
+    NSNumber *timeInterval = [dic objectForKey:@"LockInterval"];
+    return timeInterval;
+}
+
+- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex  {
+    if (alertView.tag == 1001) {
+        exit(0);
+    }
+}
+
+@end

@@ -1,0 +1,100 @@
+//
+//  SmartHallConfig.h
+//
+//
+//  Created by Yangchao on 14-10-9.
+//  Copyright (c) 2014年 Yangchao. All rights reserved.
+//
+
+#ifndef SmartHall_Config_h
+#define SmartHall_Config_h
+
+//调试bug时打印
+#ifdef DEBUG
+#define NEED_OUTPUT_LOG    1
+#else
+#define NEED_OUTPUT_LOG    0
+#endif
+//A better version of NSLog
+#if NEED_OUTPUT_LOG
+#define NSLog(format, ...) do {                                          \
+fprintf(stderr, "----------------------------------\n");                    \
+fprintf(stderr, "File:%s\nLine:%d\nMethod:%s\n",                            \
+[[[NSString stringWithUTF8String:__FILE__] lastPathComponent] UTF8String],  \
+__LINE__, __func__);                                                        \
+(NSLog)((format), ##__VA_ARGS__);                                           \
+fprintf(stderr, "----------------------------------\n");                    \
+} while (0)
+#else
+#define NSLog(format, ...)
+#endif
+
+////内网
+//#define APP_SERVER_URL                 @"https://168.7.1.49:9000/openapi/"
+//#define APP_SERVER_URL                 @"http://168.7.61.180:7201/openapi/"
+//外网
+//#define APP_SERVER_URL                 @"https://220.250.30.210:8050/openapi/"
+#define APP_SERVER_URL                 @"https://sea.cib.com.cn:443/openapi/"
+
+#define AFN_TIMEOUT_SECONDS 30
+
+//常规配置包含屏幕尺寸、系统版本、颜色配置等
+#define SCREEN_HEIGHT [[UIScreen mainScreen] bounds].size.height
+#define SCREEN_WIDTH  [[UIScreen mainScreen] bounds].size.width
+
+#define RGB(_r, _g, _b, _a) [UIColor colorWithRed:_r/255.0 green:_g/255.0 blue:_b/255.0 alpha:_a]
+#define BorderColor RGB(204, 204, 204, 1.0f)
+
+#define UIColorFromRGB(rgbValue) [UIColor colorWithRed:((float)((rgbValue & 0xFF0000) >> 16))/255.0 green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/255.0 alpha:1.0]
+
+#define BorderWidth 1
+#define M_PI        3.14159265358979323846264338327950288   /* pi             */
+
+//左边选项卡宽度
+#define K_LEFT_MAINVIEW_WIDTH 204
+#define K_STATUS_BAR_HEIGHT 24
+
+#define K_MASTER_BACKGROUND_COLOR RGB(51, 162, 239, 1.0f)//左边导航栏的背景色
+#define K_DETAIL_BACKGROUND_COLOR RGB(231, 236, 242, 1.0f)//右边视图背景色
+
+//字体大小
+#define K_FONT_48 [UIFont systemFontOfSize:48]
+#define K_FONT_20 [UIFont systemFontOfSize:20]
+#define K_FONT_18 [UIFont systemFontOfSize:18]
+#define K_FONT_16 [UIFont systemFontOfSize:16]
+#define K_FONT_15 [UIFont systemFontOfSize:15]
+#define K_FONT_14 [UIFont systemFontOfSize:14]
+#define K_FONT_13 [UIFont systemFontOfSize:13]
+#define K_FONT_11 [UIFont systemFontOfSize:11]
+
+#define iOSVersion [[[UIDevice currentDevice] systemVersion] floatValue]
+#define iOS8OrLater [[[UIDevice currentDevice] systemVersion] floatValue] >= 8.0
+
+#define K_Version  [[[NSBundle mainBundle] infoDictionary] valueForKey:@"CFBundleShortVersionString"]
+#define K_Build  [[[NSBundle mainBundle] infoDictionary] valueForKey:@"CFBundleVersion"]
+
+//保存用户号
+#define K_USER_NOTE_ID @"noteId"
+
+#define kKeyOfDeviceToken @"DeviceToken"
+
+#define k_History_users @"HistoryUsers"
+
+//多线程处理，防止循环引用
+#ifndef weakify
+#if __has_feature(objc_arc)
+#define weakify( x )    autoreleasepool{} __weak __typeof__(x) __weak_##x##__ = x;
+#else
+#define weakify( x )    autoreleasepool{} __block __typeof__(x) __block_##x##__ = x;
+#endif
+#endif
+
+#ifndef normalize
+#if __has_feature(objc_arc)
+#define normalize( x )    try{} @finally{} __typeof__(x) x = __weak_##x##__;
+#else
+#define normalize( x )    try{} @finally{} __typeof__(x) x = __block_##x##__;
+#endif
+#endif
+
+#endif

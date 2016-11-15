@@ -1,0 +1,74 @@
+//
+//  RemindView.m
+//  Lobby
+//
+//  Created by cibdev-macmini-1 on 16/3/24.
+//  Copyright © 2016年 swy. All rights reserved.
+//
+
+#import "RemindView.h"
+#import "RemindCollectCell.h"
+
+@interface RemindView ()<UICollectionViewDataSource, UICollectionViewDelegate, UICollectionViewDelegateFlowLayout>
+
+@property (weak, nonatomic) IBOutlet UICollectionView *collectionView;
+@end
+
+@implementation RemindView
+
+- (void)awakeFromNib
+{
+    [super awakeFromNib];
+    _collectionView.layer.borderWidth = 0.5;
+    _collectionView.layer.borderColor = [RGB(203, 204, 205, 1.0) CGColor];
+//    _collectionView.layer.cornerRadius = 5;
+    
+    _collectionView.dataSource = self;
+    _collectionView.delegate = self;
+    [_collectionView registerNib:[UINib nibWithNibName:@"RemindCollectCell" bundle:[NSBundle mainBundle]] forCellWithReuseIdentifier:@"RemindCollectCell"];
+}
+
+#pragma mark CollectionView 数据源和方法
+
+- (NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section
+{
+    return _reminds.count;
+}
+
+- (NSInteger)numberOfSectionsInCollectionView:(UICollectionView *)collectionView
+{
+    return 1;
+}
+
+
+- (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath
+{
+    static NSString *ID = @"RemindCollectCell";
+    
+    RemindCollectCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:ID forIndexPath:indexPath];
+    
+    cell.expiration = _reminds[indexPath.row];
+    
+    return cell;
+}
+
+- (void)setReminds:(NSArray *)reminds
+{
+    if (reminds.count == 0) {
+        UILabel *emptyLabel = [[UILabel alloc] init];
+        emptyLabel.frame = CGRectMake(self.frame.size.width / 2 - 150, self.frame.size.height / 2 - 15, 300, 30);
+        emptyLabel.text = @"加载完成，数据为空...";
+        emptyLabel.font = K_FONT_14;
+        emptyLabel.textAlignment = NSTextAlignmentCenter;
+        emptyLabel.textColor = [UIColor grayColor];
+        [self addSubview:emptyLabel];
+        
+        return;
+    } else {
+        _reminds = reminds;
+        
+        [self.collectionView reloadData];
+    }
+}
+
+@end

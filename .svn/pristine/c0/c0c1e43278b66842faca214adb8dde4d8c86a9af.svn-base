@@ -1,0 +1,58 @@
+//
+//  PrivateAppointmentView.m
+//  Lobby
+//
+//  Created by CIB-MacMini on 16/10/11.
+//  Copyright © 2016年 swy. All rights reserved.
+//
+
+#import "PrivateAppointmentView.h"
+
+@implementation PrivateAppointmentView
+
+-(void)awakeFromNib{
+    NSArray *array1 = [NSArray arrayWithObjects:@"业务类型",@"客户姓名",@"币种",@"金额",@"期望提取日期",@"新旧程度",@"面额",@"手机号",@"预约时间",@"备注",nil];
+    NSArray *array2 = [NSArray arrayWithObjects:@"1",@"2",@"3",@"4",@"5",@"6",@"7",@"8",@"9",@"10", nil];
+    
+    UIScrollView *scrollview = [[UIScrollView alloc] initWithFrame:CGRectMake(0, 50, 450, 365)];
+    scrollview.scrollEnabled = YES;
+    scrollview.showsHorizontalScrollIndicator = NO;
+    scrollview.contentSize = CGSizeMake(450, 500);
+    for (int i=0; i<10; i++) {
+        CGSize textsize = [array2[i] sizeWithAttributes:@{NSFontAttributeName:[UIFont systemFontOfSize:14.0]}];
+        if (textsize.width > 237.0) {
+            
+        }
+        
+        UILabel *label1 = [[UILabel alloc] initWithFrame:CGRectMake(105, 15 + i * 35, 120, 20)];
+        label1.text = array1[i];
+        label1.font = [UIFont systemFontOfSize:14];
+        label1.textAlignment = NSTextAlignmentRight;
+        label1.textColor = UIColorFromRGB(0x5a5a5a);
+        UILabel *Label2 = [[UILabel alloc] initWithFrame:CGRectMake(205, 15 + i * 35, 200, 20)];
+        Label2.text = array2[i];
+        Label2.font = [UIFont systemFontOfSize:14];
+        Label2.textAlignment = NSTextAlignmentLeft;
+        Label2.textColor = UIColorFromRGB(0x24344e);
+        
+        [scrollview addSubview:label1];
+        [scrollview addSubview:Label2];
+
+    }
+    
+}
+
+
+
+- (IBAction)statuschange:(id)sender {
+}
+
+- (IBAction)sendmessage:(id)sender {
+}
+
+- (IBAction)sure:(id)sender {
+}
+
+- (IBAction)cancel:(id)sender {
+}
+@end

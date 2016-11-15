@@ -1,0 +1,667 @@
+//
+//  CustomerView.m
+//  Lobby
+//
+//  Created by cibdev-macmini-1 on 16/3/23.
+//  Copyright © 2016年 swy. All rights reserved.
+//
+
+#import "CustomerView.h"
+#import "CustBasicView.h"
+#import "HasProductView.h"
+#import "RemindView.h"
+#import "CustomIndicatorView.h"
+#import "CommonUtils.h"
+#import "Basic.h"
+#import "Customer.h"
+#import "Commemoration.h"
+#import "Expiration.h"
+#import "Recommand.h"
+#import "Branch.h"
+#import <CIBBaseSDK/InvokeManager.h>
+
+@interface CustomerView ()
+{
+    UIButton *_currentButton;
+    UIView *_currentView;
+    
+    NSMutableArray *remindArray;//到期提醒数据
+    NSArray *holdProductArray;//持有产品（持有类）
+    NSArray *openBusinessArray;//开办业务 （签约类）
+    NSArray *recommandArray;
+    int _currentPage;
+    int _pageNum;
+}
+
+@property (weak, nonatomic) IBOutlet UIView *selectedLine;
+@property (weak, nonatomic) IBOutlet UIView *curContentView;
+
+@property (strong, nonatomic) CustBasicView *custView;
+@property (strong, nonatomic) HasProductView *proView;
+@property (strong, nonatomic) RemindView *remindView;
+
+@end
+
+@implementation CustomerView
+
+- (void)awakeFromNib
+{
+    
+    _currentPage = 1;
+    _pageNum = 5;
+    self.layer.cornerRadius = 4;
+    self.clipsToBounds = YES;
+    
+    [self.curContentView addSubview:self.custView];
+    _currentView = _custView;
+    
+    [self.curContentView addSubview:self.proView];
+    [self.curContentView addSubview:self.remindView];
+}
+
+- (void)setCustomer:(Customer *)customer
+{
+    _customer = customer;
+    
+    [self startAnimateInView:self];
+    
+    [self invokeCustomerBasicInfo];
+    
+    [self performSelectorInBackground:@selector(invokeRecommondProduct) withObject:nil];
+    
+    [self performSelectorInBackground:@selector(invokeExpiration) withObject:nil];
+    
+    [self custIcon];
+}
+
+- (void)custIcon
+{
+    NSString *homePath = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES)[0];
+    NSString *imageString = [NSString stringWithFormat:@"Png%@%@.png", _customer.ticketTime, _customer.ticketNo];
+    NSString *filePath = [homePath stringByAppendingPathComponent:imageString];
+    NSFileManager *manager = [NSFileManager defaultManager];
+    if ([manager fileExistsAtPath:filePath]) {
+        NSData *data = [NSData dataWithContentsOfFile:filePath];
+        UIImage *image = [UIImage imageWithData:data];
+        self.custView.custIconImage = image;
+    } else {
+        NSDictionary *paramDic = @{@"branch":[CommonUtils sharedInstance].currentBranch.branchNo, @"queue_num":_customer.ticketNo};
+        [FileManager downloadImage:@"ibpimg" withParameter:paramDic onSuccess:^(NSDictionary *responseHeader, NSData *responseBody) {
+            if (responseBody && responseBody.bytes > 0) {
+                [responseBody writeToFile:filePath atomically:YES];
+                UIImage *image = [UIImage imageWithData:responseBody];
+                self.custView.custIconImage = image;
+            }
+        } onFailure:^(NSString *responseCode, NSString *responseInfo) {
+            
+        }];
+    }
+}
+
+#pragma mark 懒加载视图
+
+- (CustBasicView *)custView
+{
+    if (_custView == nil) {
+        _custView = (CustBasicView *)[[[NSBundle mainBundle] loadNibNamed:@"CustBasicView" owner:nil options:nil] firstObject];
+    }
+    return _custView;
+}
+
+- (HasProductView *)proView
+{
+    if (_proView == nil) {
+        _proView = (HasProductView *)[[[NSBundle mainBundle] loadNibNamed:@"HasProductView" owner:nil options:nil] firstObject];
+        _proView.frame = CGRectMake(0, self.frame.size.height + 12, _proView.frame.size.width, _proView.frame.size.height);
+    }
+    return _proView;
+}
+
+- (RemindView *)remindView
+{
+    if (_remindView == nil) {
+        _remindView = (RemindView *)[[[NSBundle mainBundle] loadNibNamed:@"RemindView" owner:nil options:nil] firstObject];
+        _remindView.frame = CGRectMake(0, self.frame.size.height + 12, _remindView.frame.size.width, _remindView.frame.size.height);
+    }
+    return _remindView;
+}
+
+- (IBAction)close:(id)sender
+{
+    [[CustomIndicatorView sharedView] stopAnimating];
+    [self.superview removeFromSuperview];
+}
+
+- (IBAction)customInfo:(UIButton *)sender
+{
+    [self changeCustomerView:sender];
+}
+
+- (IBAction)hasProduct:(UIButton *)sender
+{
+    [self changeCustomerView:sender];
+}
+
+- (IBAction)warn:(UIButton *)sender
+{
+    [self changeCustomerView:sender];
+}
+
+//点击按钮事件
+- (void)changeCustomerView:(UIButton *)sender
+{
+    if (_currentButton && sender.tag == _currentButton.tag) {
+        return;
+    }
+    if (_currentButton) {
+        _currentButton.selected = NO;
+    }
+    sender.selected = YES;
+    _currentButton = sender;
+    //改变选中按钮下面线的位置
+    [self changeSelectedLine:sender];
+    //点击按钮改变对应的视图
+    [self sendSubviewToBack:_currentView];
+    [self changeContentView:sender.tag];
+}
+
+- (void)changeSelectedLine:(UIButton *)sender
+{
+    CGFloat x = sender.frame.origin.x;
+    CGFloat y = _selectedLine.frame.origin.y;
+    CGFloat w = _selectedLine.frame.size.width;
+    CGFloat h = _selectedLine.frame.size.height;
+    [UIView animateWithDuration:0.2 animations:^{
+        _selectedLine.frame = CGRectMake(x + 62, y, w, h);
+    }];
+}
+
+- (void)changeContentView:(NSInteger)tag
+{
+    switch (tag) {
+        case 101:
+        {
+            [UIView animateWithDuration:0.2 animations:^{
+                _currentView.frame = CGRectMake(0, self.frame.size.height + 12, _currentView.frame.size.width, _currentView.frame.size.height);
+                self.custView.frame = CGRectMake(0, 0, _custView.frame.size.width, _custView.frame.size.height);
+            }];
+            _currentView = _custView;
+        }
+            break;
+            
+        case 102:
+        {
+            [UIView animateWithDuration:0.2 animations:^{
+                _currentView.frame = CGRectMake(0, self.frame.size.height + 12, _currentView.frame.size.width, _currentView.frame.size.height);
+                self.proView.frame = CGRectMake(0, 0, _proView.frame.size.width, _proView.frame.size.height);
+            }];
+            _currentView = _proView;
+        }
+            break;
+            
+        case 103:
+        {
+            [UIView animateWithDuration:0.2 animations:^{
+                _currentView.frame = CGRectMake(0, self.frame.size.height + 12, _currentView.frame.size.width, _currentView.frame.size.height);
+                self.remindView.frame = CGRectMake(0, 0, _remindView.frame.size.width, _remindView.frame.size.height);
+            }];
+            _currentView = _remindView;
+        }
+            break;
+            
+        default:
+            break;
+    }
+}
+
+#pragma mark -- 从服务器获取客户基本信息数据（汇总接口）
+
+- (void)invokeCustomerBasicInfo
+{
+    
+    NSDictionary *paramDic = @{@"zjlx":@"A", @"zjhm":_customer.idCardNum, @"sjymdx":@"4", @"sjymhm":@"1"};
+    [InvokeManager invokeApi:@"ocrmgcai" withMethod:@"POST" andParameter:paramDic onSuccess:^(NSString *responseCode, NSString *responseInfo) {
+        [self stopAnimate];
+        if ([responseCode isEqualToString:@"I00"]) {
+            if ([[responseInfo valueForKey:@"resultCode"] isEqualToString:@"0"]) {
+                id result = [responseInfo valueForKey:@"result"];
+                if ([result isKindOfClass:[NSDictionary class]]) {
+                    //解析数据
+                    NSDictionary *dic = (NSDictionary *)result;
+                    id basicDic = [dic valueForKey:@"baseInfo"];
+                    id financeDic = [dic valueForKey:@"financeAssets"];
+                    id memDic = [dic valueForKey:@"mem"];
+                    id detailInfo = [dic valueForKey:@"detailInfo"];
+                    id holdBusinessDic = [dic valueForKey:@"holdBusiness"];
+                    id holdProductDic = [dic valueForKey:@"holdProduct"];
+                    //客户基本信息解析
+                    [self analysisBasicInfo:basicDic finance:financeDic];
+                    //解析纪念日
+                    [self analysisCommemoration:memDic];
+                    //解析细分
+                    [self analysisXifen:detailInfo];
+                    //持有产品和开办业务
+                    [self analysisBusiness:holdBusinessDic product:holdProductDic];
+                    
+                }
+            }
+        }
+    } onFailure:^(NSString *responseCode, NSString *responseInfo) {
+        [self stopAnimate];
+    }];
+}
+
+/**
+ *  解析用户基本信息
+ */
+- (void)analysisBasicInfo:(id)basicDic finance:(id)financeDic
+{
+    Basic *customerBasic = nil;
+    //基础信息解析
+    if ([basicDic isKindOfClass:[NSDictionary class]]) {
+        customerBasic = [[Basic alloc] init];
+        customerBasic.cardType = [basicDic valueForKey:@"zjlx"];
+        customerBasic.cardNum = [basicDic valueForKey:@"zjhm"];
+        customerBasic.customerName = [basicDic valueForKey:@"khxm"];
+        customerBasic.gender = [basicDic valueForKey:@"xb"];
+        customerBasic.birthday = [basicDic valueForKey:@"sr"];
+        customerBasic.phone = [basicDic valueForKey:@"khsjh"];
+        customerBasic.nominalLevel = [basicDic valueForKey:@"mycj"];
+        customerBasic.factLevel = [basicDic valueForKey:@"sjcj"];
+        customerBasic.openAccountDate = [basicDic valueForKey:@"khrq"];
+        customerBasic.atBranch = [basicDic valueForKey:@"gszh"];
+        customerBasic.atGroup = [basicDic valueForKey:@"gstd"];
+        customerBasic.manager = [basicDic valueForKey:@"gskhjl"];
+        customerBasic.managerPhone = [basicDic valueForKey:@"khjlsjh"];
+        
+    }
+    //资产查询
+    if ([financeDic isKindOfClass:[NSDictionary class]]) {
+        if (customerBasic == nil) {
+            customerBasic = [[Basic alloc] init];
+        }
+        customerBasic.financial = [financeDic valueForKey:@"lszgzhjrzc"];
+        customerBasic.topFinancialPoint = [financeDic valueForKey:@"lszgzhjrzcsd"];
+        customerBasic.custGap = [financeDic valueForKey:@"khtscjz"];
+    }
+    
+    customerBasic.queueNum = _customer.ticketNo;
+    _customer.customerName = customerBasic.customerName;
+    
+    self.custView.basicInfo = customerBasic;
+}
+
+/**
+ *  解析纪念日
+ */
+- (void)analysisCommemoration:(id)memDic
+{
+    if ([memDic isKindOfClass:[NSDictionary class]]) {
+        id memList = [memDic valueForKey:@"memGroupList"];
+        NSMutableArray *memes = [NSMutableArray array];
+        if ([memList isKindOfClass:[NSArray class]]) {
+            NSArray *temp = (NSArray *)memList;
+            if (temp.count > 0) {
+                for (NSDictionary *item in temp) {
+                    Commemoration *commemor = [[Commemoration alloc] init];
+                    commemor.custNo = [item valueForKey:@"khh"];
+                    commemor.commemorationType = [item valueForKey:@"jnlx"];
+                    commemor.commemorationDes = [item valueForKey:@"jnrsm"];
+                    NSString *date = [item valueForKey:@"rq"];
+                    NSArray *array = [date componentsSeparatedByString:@"-"];
+                    if (array.count == 3) {
+                        commemor.commemorationDate = [NSString stringWithFormat:@"%@月%@日", array[1], array[2]];
+                    } else {
+                        commemor.commemorationDate = date;
+                    }
+                    [memes addObject:commemor];
+                }
+            }
+        }
+        
+        self.custView.commomes = memes;
+    }
+
+}
+
+/**
+ *  解析细分
+ */
+- (void)analysisXifen:(id)detailInfo
+{
+    //细分信息解析
+    if ([detailInfo isKindOfClass:[NSDictionary class]]) {
+        NSMutableArray *prefers = [NSMutableArray arrayWithObjects:@"", @"", @"", @"", nil];//偏好解析
+        id list = [detailInfo valueForKey:@"detailGroupList"];
+        if ([list isKindOfClass:[NSArray class]] && [(NSArray *)list count] > 0) {
+            NSArray *listArray = (NSArray *)list;
+            NSDictionary *preferWay = @{@"01":@"POS", @"02":@"电话银行", @"03":@"手机银行", @"04":@"网点柜面", @"05":@"网上银行", @"06":@"自助机具"};
+            NSDictionary *preferSale = @{@"01":@"美食达人", @"02":@"商旅达人", @"03":@"购物达人", @"04":@"网购达人", @"05":@"奢侈品达人", @"06":@"居家达人"};
+            NSDictionary *preferSave = @{@"01":@"储蓄达人", @"02":@"基金达人", @"03":@"理财达人"};
+            NSDictionary *licaiDic = @{@"01":@"现金宝理财", @"02":@"开放式理财", @"03":@"短期理财", @"04":@"中短期理财", @"05":@"中长期理财", @"06":@"长期理财"};
+            NSString *homePath = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES)[0];
+            NSString *filePath = [homePath stringByAppendingPathComponent:@"keyvalue.plist"];
+            NSDictionary *rootDic = [NSDictionary dictionaryWithContentsOfFile:filePath];
+            NSMutableDictionary *wayDic = [NSMutableDictionary dictionary];
+            NSMutableDictionary *saveDic = [NSMutableDictionary dictionary];
+            NSMutableDictionary *saleDic = [NSMutableDictionary dictionary];
+            NSMutableDictionary *finaDic = [NSMutableDictionary dictionary];
+            if (rootDic) {
+                NSArray *branches = rootDic[@"Root"];
+                for (NSDictionary *item in branches) {
+                    if ([@"JYQDPH" isEqualToString:item[@"codeType"]]) {
+                        NSString *val = item[@"codeValue"];
+                        NSString *key = item[@"codeId"];
+                        [wayDic addEntriesFromDictionary:@{key:val}];
+                    }
+                    else if ([@"TZPH" isEqualToString:item[@"codeType"]]) {
+                        NSString *val = item[@"codeValue"];
+                        NSString *key = item[@"codeId"];
+                        [saveDic addEntriesFromDictionary:@{key:val}];
+                    }
+                    else if ([@"XFPH" isEqualToString:item[@"codeType"]]) {
+                        NSString *val = item[@"codeValue"];
+                        NSString *key = item[@"codeId"];
+                        [saleDic addEntriesFromDictionary:@{key:val}];
+                    }
+                    else if ([@"LCCPQXPH" isEqualToString:item[@"codeType"]]) {
+                        NSString *val = item[@"codeValue"];
+                        NSString *key = item[@"codeId"];
+                        [finaDic addEntriesFromDictionary:@{key:val}];
+                    }
+                }
+                preferWay = wayDic;
+                preferSave = saveDic;
+                preferSale = saleDic;
+                licaiDic = finaDic;
+            }
+            
+            NSMutableString *saveString = [NSMutableString stringWithString:@""];
+            NSMutableString *saleString = [NSMutableString stringWithString:@""];
+            NSMutableString *wayString = [NSMutableString stringWithString:@""];
+            for (NSDictionary *item in listArray) {
+                NSString *preferType = [item valueForKey:@"xfzl"];
+                NSString *preferTypeVal = [item valueForKey:@"xfbq"];
+                
+                if ([preferType isEqualToString:@"020"]) {
+                    NSString *val = [preferSave valueForKey:preferTypeVal];
+                    NSString *temp = (val && ![val isEqualToString:@""])  ? val : @"未知";
+                    [saveString appendString:temp];
+                    [saveString appendString:@"、"];
+                } else if ([preferType isEqualToString:@"012"]) {
+                    NSString *val = [preferSale valueForKey:preferTypeVal];
+                    NSString *temp = (val && ![val isEqualToString:@""])  ? val : @"未知";
+                    [saleString appendString:temp];
+                    [saleString appendString:@"、"];
+                } else if ([preferType isEqualToString:@"009"]) {
+                    NSString *val = [preferWay valueForKey:preferTypeVal];
+                    NSString *temp = (val && ![val isEqualToString:@""])  ? val : @"未知";
+                    [wayString appendString:temp];
+                    [wayString appendString:@"、"];
+                }
+            }
+            if ([saveString isEqualToString:@""]) {
+                [prefers replaceObjectAtIndex:0 withObject:@"未知"];
+            } else {
+                [prefers replaceObjectAtIndex:0 withObject:[saveString substringToIndex:saveString.length-1]];
+            }
+            if ([saleString isEqualToString:@""]) {
+                [prefers replaceObjectAtIndex:1 withObject:@"未知"];
+            } else {
+                [prefers replaceObjectAtIndex:1 withObject:[saleString substringToIndex:saleString.length-1]];
+            }
+            if ([wayString isEqualToString:@""]) {
+                [prefers replaceObjectAtIndex:2 withObject:@"未知"];
+            } else {
+                [prefers replaceObjectAtIndex:2 withObject:[wayString substringToIndex:wayString.length-1]];
+            }
+            
+            NSString *licai = [detailInfo valueForKey:@"lccpqxph"];
+            NSString *licaiWay = [licaiDic valueForKey:licai];
+            [prefers replaceObjectAtIndex:3 withObject:licaiWay == nil ? @"未知" : licaiWay];
+        }
+        
+        self.custView.prefers = prefers;
+        
+        //贡献度、忠诚度、活跃度解析
+        NSString *honst = [detailInfo valueForKey:@"zcdxf"];
+        NSString *gongxian = [detailInfo valueForKey:@"gxcdxf"];
+        NSString *huoyue = [detailInfo valueForKey:@"hydxf"];
+        NSString *custType = [detailInfo valueForKey:@"qlshkh"];
+        NSString *custDes = [detailInfo valueForKey:@"gczxf"];
+        NSArray *rates = @[gongxian, honst, huoyue, custType, custDes];//顺序必须是贡献、忠诚、活跃、是否潜力私行客户、是否高成长
+        
+        self.custView.rates = rates;
+        
+        //解析风险评估
+        NSDictionary *financeDic = @{@"1":@"安逸型", @"2":@"保守型", @"3":@"稳健型", @"4":@"平衡型", @"5":@"成长型", @"6":@"进取型"};
+        NSDictionary *fundDic = @{@"1":@"保守型", @"2":@"保守稳健型", @"3":@"积极稳健型", @"4":@"积极进取型"};
+        NSDictionary *insuranceDic = @{@"0":@"保守型", @"1":@"稳健型", @"2":@"平衡型", @"3":@"成长型", @"4":@"进取型", @"5":@"激进型"};
+        //从本地获取客户的风险测评码值
+        NSString *homePath = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES)[0];
+        NSString *filePath = [homePath stringByAppendingPathComponent:@"keyvalue.plist"];
+        NSDictionary *rootDic = [NSDictionary dictionaryWithContentsOfFile:filePath];
+        NSMutableDictionary *localFinance = [NSMutableDictionary dictionary];
+        NSMutableDictionary *localFund = [NSMutableDictionary dictionary];
+        NSMutableDictionary *localInsurance = [NSMutableDictionary dictionary];
+        if (rootDic) {
+            NSArray *branches = rootDic[@"Root"];
+            for (NSDictionary *item in branches) {
+                if ([@"LCFXPGJG" isEqualToString:item[@"codeType"]]) {
+                    NSString *val = item[@"codeValue"];
+                    NSString *key = item[@"codeId"];
+                    [localFinance addEntriesFromDictionary:@{key:val}];
+                } else if ([@"JJFXPGJG" isEqualToString:item[@"codeType"]]) {
+                    NSString *val = item[@"codeValue"];
+                    NSString *key = item[@"codeId"];
+                    [localFund addEntriesFromDictionary:@{key:val}];
+                } else if ([@"BXFXPGJG" isEqualToString:item[@"codeType"]]) {
+                    NSString *val = item[@"codeValue"];
+                    NSString *key = item[@"codeId"];
+                    [localInsurance addEntriesFromDictionary:@{key:val}];
+                }
+            }
+            
+            financeDic = localFinance;
+            fundDic = localFund;
+            insuranceDic = localInsurance;
+        }
+        NSString *financeRiskTime = [detailInfo valueForKey:@"lcfxpgsj"] ? : @"未知";
+        NSString *financeRisk =[financeDic valueForKey:[detailInfo valueForKey:@"lcfxpgjg"]] ? : @"未评级";
+        NSString *fundRiskTime = [detailInfo valueForKey:@"jjfxpgsj"] ? : @"未知";
+        NSString *fundRisk = [fundDic valueForKey:[detailInfo valueForKey:@"jjfxpgjg"]] ? : @"未评级";
+        NSString *insuranceRiskTime = [detailInfo valueForKey:@"bxfxpgsj"] ? : @"未知";
+        NSString *insuranceRisk = [insuranceDic valueForKey:[detailInfo valueForKey:@"bxfxpgjg"]] ? : @"未评级";
+        
+        NSArray *riskArr = @[@{financeRisk:financeRiskTime}, @{fundRisk:fundRiskTime}, @{insuranceRisk:insuranceRiskTime}];
+        
+        self.custView.riskTypes = riskArr;
+    }
+}
+
+- (void)analysisBusiness:(id)holdBusinessDic product:(id)holdProductDic
+{
+    NSString *homePath = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES)[0];
+    NSString *filePath = [homePath stringByAppendingPathComponent:@"keyvalue.plist"];
+    NSFileManager *manager = [NSFileManager defaultManager];
+    //产品持有解析数据
+    if ([holdBusinessDic isKindOfClass:[NSDictionary class]]) {
+        id businessList = [holdBusinessDic valueForKey:@"holdBusinessList"];
+        if ([businessList isKindOfClass:[NSArray class]]) {
+            NSArray *list = (NSArray *)businessList;
+            NSMutableArray *resultArr = [NSMutableArray array];
+            if ([manager fileExistsAtPath:filePath]) {
+                NSDictionary *rootDic = [NSDictionary dictionaryWithContentsOfFile:filePath];
+                NSArray *vals = [rootDic valueForKey:@"Root"];
+                //从本地的keyvalue.plist文件中获取持有产品数据
+                NSMutableArray *prodFromPlist = [NSMutableArray array];
+                for (NSDictionary *item in vals) {
+                    if ([[item valueForKey:@"codeType"] isEqualToString:@"CYCP"] || [[item valueForKey:@"codeType"] isEqualToString:@"KBYW"]) {
+                        [prodFromPlist addObject:item];
+                    }
+                }
+                //和接口返回的数据进行整合
+                for (NSDictionary *item in list) {
+                    NSString *cpcodeStr = [item valueForKey:@"cpdm"];
+                    NSString *cpcode = [cpcodeStr stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+                    NSMutableDictionary *tempDic = [NSMutableDictionary dictionaryWithDictionary:item];
+                    NSString *val = @"";
+                    for (NSDictionary *keyValue in prodFromPlist) {
+                        NSString *keyStr = [keyValue valueForKey:@"codeId"];
+                        NSString *key = [keyStr stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+                        if ([key intValue] == [cpcode intValue]) {
+                            val = [keyValue valueForKey:@"codeValue"];
+                            if (val && ![val isEqualToString:@""]) {//在本地码值中找到对应的名称
+                                [tempDic addEntriesFromDictionary:[NSDictionary dictionaryWithObjectsAndKeys:val, @"cpmc", nil]];
+                                [resultArr addObject:tempDic];
+                            }
+                            break;
+                        }
+                    }
+                    
+                }
+                [resultArr sortUsingComparator:^NSComparisonResult(NSDictionary *obj1, NSDictionary *obj2) {
+                    return [[obj2 valueForKey:@"cpcybs"] compare:[obj1 valueForKey:@"cpcybs"]];
+                }];
+                openBusinessArray = [NSArray arrayWithArray:resultArr];
+                self.proView.businesses = openBusinessArray;
+            }
+        }
+    }
+    
+    if ([holdProductDic isKindOfClass:[NSDictionary class]]) {
+        id businessList = [holdProductDic valueForKey:@"holdProductList"];
+        if ([businessList isKindOfClass:[NSArray class]]) {
+            NSArray *list = (NSArray *)businessList;
+            NSMutableArray *resultArr = [NSMutableArray array];
+            if ([manager fileExistsAtPath:filePath]) {
+                NSDictionary *rootDic = [NSDictionary dictionaryWithContentsOfFile:filePath];
+                NSArray *vals = [rootDic valueForKey:@"Root"];
+                //从本地的keyvalue.plist文件中获取持有产品数据
+                NSMutableArray *prodFromPlist = [NSMutableArray array];
+                for (NSDictionary *item in vals) {
+                    if ([[item valueForKey:@"codeType"] isEqualToString:@"CYCP"] || [[item valueForKey:@"codeType"] isEqualToString:@"KBYW"]) {
+                        [prodFromPlist addObject:item];
+                    }
+                }
+                //和接口返回的数据进行整合
+                for (NSDictionary *item in list) {
+                    NSString *cpcodeStr = [item valueForKey:@"cpdm"];
+                    NSString *cpcode = [cpcodeStr stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+                    NSMutableDictionary *tempDic = [NSMutableDictionary dictionaryWithDictionary:item];
+                    NSString *val = @"";
+                    for (NSDictionary *keyValue in prodFromPlist) {
+                        NSString *keyStr = [keyValue valueForKey:@"codeId"];
+                        NSString *key = [keyStr stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+                        if ([key intValue] == [cpcode intValue]) {
+                            val = [keyValue valueForKey:@"codeValue"];
+                            if (val && ![val isEqualToString:@""]) {//在本地码值中找到对应的名称
+                                [tempDic addEntriesFromDictionary:[NSDictionary dictionaryWithObjectsAndKeys:val, @"cpmc", nil]];
+                                [resultArr addObject:tempDic];
+                            }
+                            break;
+                        }
+                    }
+                    
+                }
+            }
+            [resultArr sortUsingComparator:^NSComparisonResult(NSDictionary *obj1, NSDictionary *obj2) {
+                return [[obj2 valueForKey:@"cpcybs"] compare:[obj1 valueForKey:@"cpcybs"]];
+            }];
+            holdProductArray = [NSArray arrayWithArray:resultArr];
+            self.proView.products = holdProductArray;
+        }
+    }
+}
+
+- (void)invokeRecommondProduct
+{
+    NSDictionary *paramDic = @{@"zjlx":@"A", @"zjhm":_customer.idCardNum, @"dqdh":COM_INSTANCE.currentBranch.areaCode, @"jgdh":COM_INSTANCE.currentBranch.branchCode, @"zddh":_customer.terminalCode ? : @"", @"fjxx":@"附加信息"};
+    [InvokeManager invokeApi:@"bdgrp" withMethod:@"POST" andParameter:paramDic onSuccess:^(NSString *responseCode, NSString *responseInfo) {
+        if ([responseCode isEqualToString:@"I00"]) {
+            id result = [responseInfo valueForKey:@"result"];
+            if ([result isKindOfClass:[NSDictionary class]]) {
+                //解析数据
+                Recommand *command1 = [[Recommand alloc] init];
+                command1.recommandName = [result valueForKey:@"tjcp1"];
+                command1.recommandContent = [result valueForKey:@"tjly1"];
+                
+                Recommand *command2 = [[Recommand alloc] init];
+                command2.recommandName = [result valueForKey:@"tjcp2"];
+                command2.recommandContent = [result valueForKey:@"tjly2"];
+                
+                Recommand *command3 = [[Recommand alloc] init];
+                command3.recommandName = [result valueForKey:@"tjcp3"];
+                command3.recommandContent = [result valueForKey:@"tjly3"];
+                
+                recommandArray = @[command1, command2, command3];
+                
+                self.proView.recommands = recommandArray;
+            }
+        }
+    } onFailure:^(NSString *responseCode, NSString *responseInfo) {
+//        NSString *alertInfo = [NSString stringWithFormat:@"错误%@， 网络连接错误", responseCode];
+//        [self showMessage:alertInfo];
+    }];
+}
+
+- (void)invokeExpiration
+{
+    NSDictionary *paramDic = @{@"zjlx":@"A", @"zjhm":_customer.idCardNum, @"sjymdx":[NSString stringWithFormat:@"%d", _pageNum], @"sjymhm":[NSString stringWithFormat:@"%d", _currentPage]};
+    
+    void(^failure)(NSString *, NSString *) = ^(NSString *responseCode, NSString *responseInfo) {
+        
+    };
+    
+    void(^success)(NSString *, NSString *) = ^(NSString *responseCode, NSString *responseInfo) {
+        if ([responseCode isEqualToString:@"I00"]) {
+            id result = [responseInfo valueForKey:@"result"];
+            if ([result isKindOfClass:[NSDictionary class]]) {
+                //对数据进行正确处理
+                id eventList = [result valueForKey:@"eventGroupList"];
+                NSDictionary *typeDic = @{@"21":@"定存到期", @"22":@"本外币理财到期", @"23":@"国债到期"};
+                NSMutableArray *reminds = [NSMutableArray array];
+                if ([eventList isKindOfClass:[NSArray class]]) {
+                    NSArray *list = (NSArray *)eventList;
+                    for (NSDictionary *item in list) {
+                        NSString *eventType = [item valueForKey:@"sjlx"];
+                        NSString *eventStatus = [item valueForKey:@"zt"];
+                        NSString *eventContent = [item valueForKey:@"sjnr"];
+                        Expiration *ex = [[Expiration alloc] init];
+                        ex.expirationName = [typeDic valueForKey:eventType] ? : @"";
+                        ex.expirationContent = eventContent;
+                        ex.expirationStatus = eventStatus;
+                        
+                        [reminds addObject:ex];
+                    }
+                }
+                //判断是否还有到期提醒数据
+                _currentPage++;
+                int totals = [[result valueForKey:@"jlzs"] intValue];
+                int pages = totals % _pageNum == 0 ? totals / _pageNum : (totals / _pageNum) + 1;
+                if (_currentPage <= pages) {
+                    [self invokeExpiration];
+                } else if (_currentPage > pages) {
+                    //设置数据，更新UI
+                    self.remindView.reminds = reminds;
+                }
+            }
+        }
+    };
+    
+    [InvokeManager invokeApi:@"ocrmgce" withMethod:@"POST" andParameter:paramDic onSuccess:success onFailure:failure];
+}
+
+- (void)startAnimateInView:(UIView *)view
+{
+    CustomIndicatorView *indicatorView = [CustomIndicatorView sharedView];
+    [indicatorView startAnimating];
+    [indicatorView showInView:view];
+}
+
+- (void)stopAnimate
+{
+    [[CustomIndicatorView sharedView] stopAnimating];
+}
+
+@end

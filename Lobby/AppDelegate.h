@@ -1,0 +1,30 @@
+//
+//  AppDelegate.h
+//  SmartHall
+//
+//  Created by YangChao on 13/1/16.
+//  Copyright © 2016年 swy. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "LockViewController.h"
+
+@interface AppDelegate : UIResponder <UIApplicationDelegate>
+
+@property (strong, nonatomic) UIWindow *window;
+@property (strong, nonatomic) UIViewController *currentVc;
+@property (weak, nonatomic) NSTimer *myTimer;
+@property (weak, nonatomic) NSTimer *stationTimer;
+@property (weak, nonatomic) NSTimer *queueTimer;
+@property (weak, nonatomic) NSTimer *customerTimer;
+@property (weak, nonatomic) NSTimer *commentTimer;
+@property (weak, nonatomic) NSTimer *dateTimer;
+@property (assign, nonatomic) BOOL isAppActive; // 应用激活状态
+@property (weak, nonatomic) LockViewController *lockVc; // 解锁界面
+
+- (void)pushRegist;
+
++ (AppDelegate *)delegate;
+- (void)showLockViewController:(LockViewType)type onSucceeded:(void(^)())onSucceededBlock onFailed:(void(^)())onFailedBlock;
+@end
+

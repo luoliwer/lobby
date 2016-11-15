@@ -1,0 +1,294 @@
+//
+//  DateCustCell.m
+//  Lobby
+//
+//  Created by cibdev-macmini-1 on 16/10/11.
+//  Copyright © 2016年 swy. All rights reserved.
+//
+
+#import "DateCustCell.h"
+#import "DateInfo.h"
+
+//预约类型
+typedef enum : NSUInteger {
+    DateTypePublic,//对公预约
+    DateTypeForeign,//对私外币预约
+    DateTypeCash,//对私人民币预约
+} DateType;
+
+//预约进行状态类型
+//通过三色来区分对应状态文字显示的颜色
+typedef enum : NSUInteger {
+    DateHandleTypeRed = 1,
+    DateHandleTypeGreen,
+    DateHandleTypeGray,
+} DateHandleType;
+
+//定义对公对私的不同处理按钮名称
+NSString * const DatePublicBtnName = @"查看";
+NSString * const DatePrivateBtnName = @"预约处理";
+
+CGFloat const DatePublicBtnWidth = 40;
+CGFloat const DatePrivateBtnWidth = 70;
+
+//定义预约类型常量value值
+NSString * const DateTypePublicName = @"对公预约";
+NSString * const DateTypePrivateCashName = @"对私人民币预约";
+NSString * const DateTypePrivateDollorName = @"对私外币预约";
+
+//定义预约类型常量key值
+NSString * const DateTypePublicKey = @"11";
+NSString * const DateTypePrivateCashKey = @"13";
+NSString * const DateTypePrivateDollorKey= @"14";
+
+//对公 预约状态常量值定义
+NSString * const StatusTypeKey1 = @"1";
+NSString * const StatusTypeKey2 = @"2";
+NSString * const StatusTypeKey4 = @"4";
+NSString * const StatusTypeKey6 = @"6";
+NSString * const StatusTypeKey7 = @"7";
+NSString * const StatusTypeKey8 = @"8";
+NSString * const StatusTypeKey9 = @"9";
+
+//对公 名称
+NSString * const StatusPublicName1 = @"未受理";
+NSString * const StatusPublicName2 = @"已受理";
+NSString * const StatusPublicName4 = @"已作废";
+NSString * const StatusPublicName6 = @"审核通过";
+NSString * const StatusPublicName7 = @"审核不通过";
+NSString * const StatusPublicName8 = @"审核不通过并修改";
+NSString * const StatusPublicName9 = @"处理中";
+
+//对私 名称
+NSString * const StatusPrivateName1 = @"未受理";
+NSString * const StatusPrivateName2 = @"提取完成";
+NSString * const StatusPrivateName4 = @"客户放弃";
+NSString * const StatusPrivateName6 = @"已备钞待提取";
+NSString * const StatusPrivateName7 = @"无法满足客户需求";
+NSString * const StatusPrivateName9 = @"正在备钞";
+
+@interface DateCustCell ()
+
+//通过该状态来展示图片和文字
+@property (assign, nonatomic) DateType dateType;
+//通过其展示不同文字颜色
+@property (assign, nonatomic) DateHandleType handleType;
+
+@property (weak, nonatomic) IBOutlet UIButton *dateIconAndTitle;
+@property (weak, nonatomic) IBOutlet UILabel *custName;
+@property (weak, nonatomic) IBOutlet UILabel *dateTime;
+@property (weak, nonatomic) IBOutlet UILabel *status;
+@property (weak, nonatomic) IBOutlet UIButton *detailOrHandleBtn;
+@property (weak, nonatomic) IBOutlet NSLayoutConstraint *detailOrHandleBtnWidthConstraint;
+
+@end
+
+@implementation DateCustCell
+
+- (void)awakeFromNib {
+    [super awakeFromNib];
+    
+    self.layer.cornerRadius = 4;
+    self.clipsToBounds = YES;
+    
+    self.detailOrHandleBtn.layer.borderColor = [RGB(75, 128, 255, 1.0) CGColor];
+    self.detailOrHandleBtn.layer.borderWidth = 1;
+    self.detailOrHandleBtn.layer.cornerRadius = 4;
+    self.detailOrHandleBtn.clipsToBounds = YES;
+}
+
+- (void)setDate:(DateInfo *)date
+{
+    _date = date;
+    
+    //时间显示处理
+    NSString *time = _date.createTime;
+    NSDateFormatter *formatter=[[NSDateFormatter alloc] init];
+    [formatter setDateFormat:@"yyyyMMdd"];
+    NSDate *d = [formatter dateFromString:time];
+    NSDateFormatter *newmatter = [[NSDateFormatter alloc] init];
+    [newmatter setDateFormat:@"yyyy-MM-dd"];
+    NSString *dateStr = [newmatter stringFromDate:d];
+    _dateTime.text = dateStr;
+    //设置
+    if ([_date.businessType isEqualToString:DateTypePublicKey]) {
+        self.dateType = DateTypePublic;
+        [self.dateIconAndTitle setBackgroundColor:RGB(134, 208, 246, 1)];
+        _custName.text = _date.custName;
+        self.detailOrHandleBtnWidthConstraint.constant = DatePublicBtnWidth;
+    } else if ([_date.businessType isEqualToString:DateTypePrivateDollorKey]) {
+        self.dateType = DateTypeForeign;
+        NSString *custNm = [NSString stringWithFormat:@"%@ (%@)", _date.custName, _date.phoneNum];
+        _custName.text = custNm;
+        [self.dateIconAndTitle setBackgroundColor:RGB(255, 145, 76, 1)];
+        self.detailOrHandleBtnWidthConstraint.constant = DatePrivateBtnWidth;
+    } else if ([_date.businessType isEqualToString:DateTypePrivateCashKey]) {
+        self.dateType = DateTypeCash;
+        NSString *custNm = [NSString stringWithFormat:@"%@ (%@)", _date.custName, _date.phoneNum];
+        _custName.text = custNm;
+        [self.dateIconAndTitle setBackgroundColor:RGB(104, 206, 145, 1)];
+        self.detailOrHandleBtnWidthConstraint.constant = DatePrivateBtnWidth;
+    }
+    //设置按钮的显示与隐藏
+    if (![_date.businessType isEqualToString:DateTypePublicKey] && ([_date.dateStatus isEqualToString:StatusTypeKey2] || [_date.dateStatus isEqualToString:StatusTypeKey4] ||[_date.dateStatus isEqualToString:StatusTypeKey7])) {
+        self.detailOrHandleBtn.hidden = YES;
+    } else {
+        self.detailOrHandleBtn.hidden = NO;
+    }
+    //预约状态显示文字颜色
+    [self confirmStatusTypeBy:self.dateType key:_date.dateStatus];
+    //预约状态显示文字设置
+    [self confirmStatusNameBy:self.dateType key:_date.dateStatus];
+}
+
+- (void)confirmStatusNameBy:(DateType)type key:(NSString *)key
+{
+    int keyInt = [key intValue];
+    if (type == DateTypePublic) {
+        switch (keyInt) {
+            case 1:
+                self.status.text = StatusPublicName1;
+                break;
+            case 2:
+                self.status.text = StatusPublicName2;
+                break;
+            case 4:
+                self.status.text = StatusPublicName4;
+                break;
+            case 6:
+                self.status.text = StatusPublicName6;
+                break;
+            case 7:
+                self.status.text = StatusPublicName7;
+                break;
+            case 8:
+                self.status.text = StatusPublicName8;
+                break;
+            case 9:
+                self.status.text = StatusPublicName9;
+                break;
+                
+            default:
+                break;
+        }
+    } else {
+        switch (keyInt) {
+            case 1:
+                self.status.text = StatusPrivateName1;
+                break;
+            case 2:
+                self.status.text = StatusPrivateName2;
+                break;
+            case 4:
+                self.status.text = StatusPrivateName4;
+                break;
+            case 6:
+                self.status.text = StatusPrivateName6;
+                break;
+            case 7:
+                self.status.text = StatusPrivateName7;
+                break;
+            case 9:
+                self.status.text = StatusPrivateName9;
+                break;
+                
+            default:
+                break;
+        }
+    }
+}
+
+- (void)confirmStatusTypeBy:(DateType)type key:(NSString *)key
+{
+    int keyInt = [key intValue];
+    if (type == DateTypePublic) {
+        switch (keyInt) {
+            case 1:
+                self.handleType = DateHandleTypeRed;
+                break;
+            case 6:
+                self.handleType = DateHandleTypeGreen;
+                break;
+            default:
+                self.handleType = DateHandleTypeGray;
+                break;
+        }
+    } else if (type == DateTypeForeign) {
+        switch (keyInt) {
+            case 1:
+                self.handleType = DateHandleTypeRed;
+                break;
+            case 6:
+            case 9:
+                self.handleType = DateHandleTypeGreen;
+                break;
+            default:
+                self.handleType = DateHandleTypeGray;
+                break;
+        }
+    } else if (type == DateTypeCash) {
+        switch (keyInt) {
+            case 1:
+                self.handleType = DateHandleTypeRed;
+                break;
+            case 6:
+            case 9:
+                self.handleType = DateHandleTypeGreen;
+                break;
+            default:
+                self.handleType = DateHandleTypeGray;
+                break;
+        }
+    }
+}
+
+- (void)setDateType:(DateType)dateType
+{
+    _dateType = dateType;
+    
+    if (_dateType == DateTypePublic) {
+        //设置展示图片
+        [_dateIconAndTitle setTitle:DateTypePublicName forState:UIControlStateNormal];
+        [_dateIconAndTitle setImage:[UIImage imageNamed:@"dateType1"] forState:UIControlStateNormal];
+        //设置详情按钮
+        [_detailOrHandleBtn setTitle:DatePublicBtnName forState:UIControlStateNormal];
+    } else if (_dateType == DateTypeForeign) {
+        //设置展示图片
+        [_dateIconAndTitle setTitle:DateTypePrivateDollorName forState:UIControlStateNormal];
+        [_dateIconAndTitle setImage:[UIImage imageNamed:@"dateType6"] forState:UIControlStateNormal];
+        //设置详情按钮
+        [_detailOrHandleBtn setTitle:DatePrivateBtnName forState:UIControlStateNormal];
+    } else {
+        //设置展示图片
+        [_dateIconAndTitle setTitle:DateTypePrivateCashName forState:UIControlStateNormal];
+        [_dateIconAndTitle setImage:[UIImage imageNamed:@"dateType4"] forState:UIControlStateNormal];
+        //设置详情按钮
+        [_detailOrHandleBtn setTitle:DatePrivateBtnName forState:UIControlStateNormal];
+    }
+}
+
+- (void)setHandleType:(DateHandleType)handleType
+{
+    _handleType = handleType;
+    
+    if (_handleType == DateHandleTypeRed) {
+        _status.textColor = UIColorFromRGB(0xfe6c54);
+    } else if (_handleType == DateHandleTypeGreen) {
+        _status.textColor = UIColorFromRGB(0x74cf8c);
+    } else {
+        _status.textColor = UIColorFromRGB(0xc7c7c7);
+    }
+}
+
+- (IBAction)detailOrHandleDate:(UIButton *)sender
+{
+    if (_detailOrHandleEvent) {
+        _detailOrHandleEvent(self);
+    }
+}
+
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated {
+    [super setSelected:selected animated:animated];
+}
+
+@end

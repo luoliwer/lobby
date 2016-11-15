@@ -1,0 +1,24 @@
+//
+//  BusinessChoiceTableViewCell.m
+//  Lobby
+//
+//  Created by CIB-MacMini on 16/4/13.
+//  Copyright © 2016年 swy. All rights reserved.
+//
+
+#import "BusinessChoiceTableViewCell.h"
+
+@implementation BusinessChoiceTableViewCell
+
+- (void)awakeFromNib {
+    [super awakeFromNib];
+    // Initialization code
+}
+
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated {
+    [super setSelected:selected animated:animated];
+
+    // Configure the view for the selected state
+}
+
+@end

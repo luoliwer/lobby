@@ -1,0 +1,113 @@
+//
+//  DateCustCell.m
+//  Lobby
+//
+//  Created by cibdev-macmini-1 on 16/10/11.
+//  Copyright © 2016年 swy. All rights reserved.
+//
+
+#import "DateCustCell.h"
+#import "DateInfo.h"
+
+//预约类型
+typedef enum : NSUInteger {
+    DateTypePublic,//对公预约
+    DateTypeForeign,//对私外币预约
+    DateTypeCash,//对私人民币预约
+} DateType;
+
+//预约进行状态类型
+//通过三色来区分对应状态文字显示的颜色
+typedef enum : NSUInteger {
+    DateHandleTypeRed = 1,
+    DateHandleTypeGreen,
+    DateHandleTypeGray,
+} DateHandleType;
+
+@interface DateCustCell ()
+
+//通过该状态来展示图片和文字
+@property (assign, nonatomic) DateType dateType;
+//通过其展示不同文字颜色
+@property (assign, nonatomic) DateHandleType handleType;
+
+@property (weak, nonatomic) IBOutlet UIButton *dateIconAndTitle;
+@property (weak, nonatomic) IBOutlet UILabel *custName;
+@property (weak, nonatomic) IBOutlet UILabel *moneyType;
+@property (weak, nonatomic) IBOutlet UILabel *moneyNum;
+@property (weak, nonatomic) IBOutlet UILabel *dateTime;
+@property (weak, nonatomic) IBOutlet UILabel *status;
+@property (weak, nonatomic) IBOutlet UIButton *detailOrHandleBtn;
+
+@end
+
+@implementation DateCustCell
+
+- (void)awakeFromNib {
+    
+    self.layer.cornerRadius = 4;
+    self.clipsToBounds = YES;
+    
+//    self.detailOrHandleBtn.layer.borderColor = [[UIColor grayColor] CGColor];
+//    self.detailOrHandleBtn.layer.borderWidth = 0.5;
+//    self.detailOrHandleBtn.layer.cornerRadius = 3;
+//    self.detailOrHandleBtn.clipsToBounds = YES;
+}
+
+- (void)setDate:(DateInfo *)date
+{
+    _date = date;
+    
+    //设置
+}
+
+- (void)setDateType:(DateType)dateType
+{
+    _dateType = dateType;
+    
+    if (_dateType == DateTypePublic) {
+        //设置展示图片
+        [_dateIconAndTitle setTitle:@"对公预约" forState:UIControlStateNormal];
+        [_dateIconAndTitle setImage:[UIImage imageNamed:@"dateType1"] forState:UIControlStateNormal];
+        //设置详情按钮
+        [_detailOrHandleBtn setTitle:@"查看详情" forState:UIControlStateNormal];
+    } else if (_dateType == DateTypeForeign) {
+        //设置展示图片
+        [_dateIconAndTitle setTitle:@"对私外币预约" forState:UIControlStateNormal];
+        [_dateIconAndTitle setImage:[UIImage imageNamed:@"dateType6"] forState:UIControlStateNormal];
+        //设置详情按钮
+        [_detailOrHandleBtn setTitle:@"查看详情并处理" forState:UIControlStateNormal];
+    } else {
+        //设置展示图片
+        [_dateIconAndTitle setTitle:@"对私人民币预约" forState:UIControlStateNormal];
+        [_dateIconAndTitle setImage:[UIImage imageNamed:@"dateType4"] forState:UIControlStateNormal];
+        //设置详情按钮
+        [_detailOrHandleBtn setTitle:@"查看并处理" forState:UIControlStateNormal];
+    }
+}
+
+- (void)setHandleType:(DateHandleType)handleType
+{
+    _handleType = handleType;
+    
+    if (_handleType == DateHandleTypeRed) {
+        _status.textColor = UIColorFromRGB(0xfe6c54);
+    } else if (_handleType == DateHandleTypeGreen) {
+        _status.textColor = UIColorFromRGB(0x74cf8c);
+    } else {
+        _status.textColor = UIColorFromRGB(0xc7c7c7);
+    }
+}
+
+- (IBAction)detailOrHandleDate:(UIButton *)sender
+{
+    if (_detailOrHandleEvent) {
+        _detailOrHandleEvent(self);
+    }
+}
+
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated {
+    [super setSelected:selected animated:animated];
+}
+
+@end

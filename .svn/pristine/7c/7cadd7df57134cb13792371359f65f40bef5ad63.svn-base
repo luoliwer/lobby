@@ -1,0 +1,60 @@
+//
+//  ProtentialRateView.m
+//  Lobby
+//
+//  Created by cibdev-macmini-1 on 16/3/24.
+//  Copyright © 2016年 swy. All rights reserved.
+//
+
+#import "ProtentialRateView.h"
+
+@interface ProtentialRateView ()
+@property (weak, nonatomic) IBOutlet UILabel *rateTypeLb;
+@property (weak, nonatomic) IBOutlet UILabel *rateVal;
+@property (weak, nonatomic) IBOutlet UIView *lowColorLine;
+@property (weak, nonatomic) IBOutlet UIView *valLine;
+
+@end
+
+@implementation ProtentialRateView
+
+- (void)awakeFromNib
+{
+    [super awakeFromNib];
+    
+    _lowColorLine.layer.cornerRadius = 1.5;
+    _lowColorLine.clipsToBounds = YES;
+    
+    _valLine.layer.cornerRadius = 1.5;
+    _valLine.clipsToBounds = YES;
+}
+
+- (void)setName:(NSString *)name
+{
+    _name = name;
+    
+    _rateVal.text = _name;
+}
+
+- (void)setRateType:(NSString *)rateType
+{
+    _rateType = rateType;
+    
+    _rateTypeLb.text = _rateType;
+}
+
+- (void)setRate:(CGFloat)rate
+{
+    _rate = rate;
+    
+    [self layoutSubviews];
+}
+
+- (void)layoutSubviews
+{
+    [super layoutSubviews];
+    
+    _valLine.frame = CGRectMake(0, _valLine.frame.origin.y, _lowColorLine.frame.size.width * _rate, _valLine.frame.size.height);
+}
+
+@end

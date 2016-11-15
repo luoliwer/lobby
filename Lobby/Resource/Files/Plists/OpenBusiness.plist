@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>31</key>
+	<string>基金定投</string>
+	<key>41</key>
+	<string>第三方存管</string>
+	<key>43</key>
+	<string>兴业通</string>
+	<key>70</key>
+	<string>精英版电子银行</string>
+	<key>46</key>
+	<string>一表双卡</string>
+	<key>72</key>
+	<string>个人网银客户</string>
+	<key>74</key>
+	<string>手机银行客户</string>
+</dict>
+</plist>
